@@ -8,6 +8,8 @@ This project will take s DB schema and generate the following scripts
 4. Move records from Temp Table to Final Hive Table
 5. Drop Temp Load Hive Table
 
+It will also generate sample data for you to load into your tables.
+
 ## UDF Overview
 This project contains the following UDFs
 

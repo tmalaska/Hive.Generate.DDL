@@ -101,8 +101,6 @@ public class ScriptGenerator {
 	
 	public static String generateInsertInto(RDBSchema schema) {
 		
-		boolean usedBigBigInt = false;
-		
 		StringBuilder builder = new StringBuilder();
 		
 		builder.append("SET hive.exec.compress.output=true;" + lineSeparator); 
@@ -149,8 +147,7 @@ public class ScriptGenerator {
 					builder.append("from_unixtime(unix_timestamp(a." + c.getName() + ", '" + dateFormat + "'))");
 				} else if (type.equals("NUMBER")) {
 					if (c.getLength() > 18) {
-						usedBigBigInt = true;
-						builder.append("toBigBigInt(a." + c.getName() + ", " + c.getLength() + ")");
+						builder.append("a." + c.getName());
 					} else if (c.getLength() > 9) {
 						builder.append("cast(a." + c.getName() + " as BIGINT)");
 					} else if (c.getLength() > 4) {
@@ -168,16 +165,7 @@ public class ScriptGenerator {
 		
 		builder.append("FROM " + schema.getTableName() + "_TEMP a;");
 		
-		if (usedBigBigInt) {
-			return  "add jar hive.bigbigint.jar;" + 
-					lineSeparator +
-					"create temporary function toBigBigInt as 'com.cloudera.sa.hive.bigbigint.ConvertToBigBigInt';" +
-					lineSeparator + 
-					
-					builder.toString();
-		} else {
-			return builder.toString();	
-		}
+		return builder.toString();	
 	}
 
 	
