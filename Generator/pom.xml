@@ -77,10 +77,10 @@
             <descriptorRef>jar-with-dependencies</descriptorRef>
           </descriptorRefs>
           <appendAssemblyId>false</appendAssemblyId>
-          <finalName>hcu</finalName>
+          <finalName>hiveGen</finalName>
           <archive>
             <manifest>
-              <mainClass>com.cloudera.sa.hcu.hcuMain</mainClass>
+              <mainClass>com.cloudera.sa.hive.gen.script.App</mainClass>
             </manifest>
           </archive>
         </configuration>
