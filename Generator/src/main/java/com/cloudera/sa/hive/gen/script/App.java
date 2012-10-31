@@ -17,9 +17,16 @@ public class App
 {
     public static void main( String[] args ) throws IOException
     {
-    
-        CSVReader reader = new CSVReader(new FileReader("/Users/ted.malaska/Documents/workspace/hive.gen.script/samples/bigSample.csv"));
-        String outputDirector = "/Users/ted.malaska/Documents/workspace/hive.gen.script/output/";
+    	if (args.length != 2) {
+    		System.out.println("hiveGen - help");
+    		System.out.println("");
+    		System.out.println("example:");
+    		System.out.println("hadoop jar hiveGen.jar <csv file path> <outputDir>");
+    	}
+        //CSVReader reader = new CSVReader(new FileReader("/Users/ted.malaska/Documents/workspace/hive.gen.script/samples/bigSample.csv"));
+    	CSVReader reader = new CSVReader(new FileReader(args[0]));
+        //String outputDirector = "/Users/ted.malaska/Documents/workspace/hive.gen.script/output/";
+    	String outputDirector = args[1];
         String [] nextLine;
         
         RDBSchema schema = new RDBSchema();
