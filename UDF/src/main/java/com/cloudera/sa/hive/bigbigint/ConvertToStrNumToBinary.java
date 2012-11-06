@@ -7,7 +7,15 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 
 
-public class ConvertToBigBigInt extends UDF {
+public class ConvertToStrNumToBinary extends UDF {
+	IntWritable defaultNumOfBytes = new IntWritable(16);
+	Text result = new Text();
+	
+	public Text evaluate(final Text val) {
+		
+		return this.evaluate(val, defaultNumOfBytes);
+	}
+	
 	public Text evaluate(final Text val, final IntWritable numOfBytes) {
 		BigInteger bi = new BigInteger(val.toString());
 		byte[] bytes = bi.toByteArray();
@@ -23,8 +31,9 @@ public class ConvertToBigBigInt extends UDF {
                 bigBytes,
                 bigBytes.length - bytes.length,
                 bytes.length);
-		Text result = new Text();
+		
 		result.set(bigBytes);
 		return result;
+		
 	}
 }

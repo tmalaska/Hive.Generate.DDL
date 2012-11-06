@@ -3,6 +3,7 @@ package com.cloudera.sa.hive.gen.script;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema;
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema.Column;
@@ -14,12 +15,32 @@ public class ScriptGenerator {
 	public static String dateFormat = "yyyy.MM.dd";
 	public static SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
 	
-	public static String generateHiveTable(RDBSchema schema) {
+	/**
+	 * temp.table.row.format=ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
+temp.table.stored.as=STORED AS TextFile
+temp.table.add.jars=com.cloudera.sa.hive.example.serde
+final.table.external.location=customhive/private
+	 */
+	public static final String TEMP_TABLE_ROW_FORMAT = "temp.table.row.format";
+	public static final String TEMP_TABLE_STORED_AS = "temp.table.stored.as";
+	public static final String TEMP_TABLE_ADD_JARS = "temp.table.add.jars";
+	public static final String TEMP_TABLE_EXTERNAL_LOCATION = "final.table.external.location";
+	
+	public static String generateHiveTable(RDBSchema schema, Properties prop) {
 		List<Column> columns = schema.getColumns();
+		String externalLocation = prop.getProperty(TEMP_TABLE_EXTERNAL_LOCATION);
 		
 		StringBuilder builder = new StringBuilder();
 		
-		builder.append("CREATE TABLE " + schema.getTableName() + lineSeparator);
+		
+		
+		builder.append("CREATE ");
+		
+		if (externalLocation != null && externalLocation.isEmpty() == false) {
+			builder.append("EXTERNAL ");
+		}
+		
+		builder.append("TABLE " + schema.getTableName() + lineSeparator);
 		builder.append("( " );
 		
 		boolean isFirstColumn = true;
@@ -35,7 +56,7 @@ public class ScriptGenerator {
 			}
 		}
 		
-		builder.append(")");
+		builder.append(") " +  lineSeparator);
 		
 		List<Column> partitionColumns = schema.getPartitionColumns();
 		if (partitionColumns.size() > 0) {
@@ -54,12 +75,20 @@ public class ScriptGenerator {
 			builder.append(")" + lineSeparator);
 		}
 		
-	    builder.append(" STORED AS RCFile;");
+		builder.append(" STORED AS RCFile");
+	    
+		
+		if (externalLocation != null && externalLocation.isEmpty() == false) {
+			builder.append(" LOCATION \\\"" + externalLocation + "\\\"" + lineSeparator);
+		}
+		
+	    
+	    builder.append(";");
 		
 		return builder.toString();
 	}
 	
-	public static String generateTempHiveTable(RDBSchema schema) {
+	public static String generateTempHiveTable(RDBSchema schema, Properties prop) {
 		
 		List<Column> columns = schema.getColumns();
 		
@@ -83,14 +112,10 @@ public class ScriptGenerator {
 		
 		builder.append(")" + lineSeparator);
 		
-		String originalFormat = schema.getOriginalDataFormat().toUpperCase();
-		if (originalFormat.equals("CSV")) {
-			builder.append("ROW FORMAT SERDE 'com.bizo.hive.serde.csv.CSVSerde'" + lineSeparator);	
-		} else { 
-			builder.append("ROW FORMAT DELIMITED FIELDS TERMINATED BY '" + originalFormat + "'" + lineSeparator);
-		}
+		builder.append(prop.getProperty(TEMP_TABLE_ROW_FORMAT) + lineSeparator);
 		
-		builder.append(" STORED AS TextFile;");
+		
+		builder.append(prop.getProperty(TEMP_TABLE_STORED_AS) + ";");
 		
 		return builder.toString();
 	}	
@@ -195,11 +220,18 @@ public class ScriptGenerator {
 	}
 
 	public static String generateLoadOverwrite(RDBSchema schema) {
-		
-		return "LOAD DATA LOCAL INPATH \\\"$1\\\" OVERWRITE INTO TABLE " + schema.getTableName() + "_TEMP";
+	
+		String newLine = System.getProperty("line.separator");
+		return "FILES=$1 " + newLine + 
+				"for f in $FILES " + newLine + 
+				"do " + newLine + 
+				"  echo \"Loading $f file...\" " + newLine + 
+				"  hive -e \"LOAD DATA LOCAL INPATH \\\"$1\\\" OVERWRITE INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + 
+				"done " + newLine + newLine;
 	}
 	
 	public static String generateTestData(RDBSchema schema, int linesOfData) {
+		
 		List<Column> columns = schema.getColumns();
 		
 		StringBuilder builder = new StringBuilder();

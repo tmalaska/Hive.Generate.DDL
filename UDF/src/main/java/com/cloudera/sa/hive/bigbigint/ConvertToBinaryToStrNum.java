@@ -6,7 +6,7 @@ import org.apache.hadoop.hive.ql.exec.UDF;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 
-public class ConvertToNumberValueString extends UDF {
+public class ConvertToBinaryToStrNum extends UDF {
 	public Text evaluate(final Text val, final IntWritable numOfBytes) {
 		BigInteger bi = new BigInteger(val.copyBytes());
 		
