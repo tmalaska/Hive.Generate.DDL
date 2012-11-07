@@ -222,11 +222,11 @@ final.table.external.location=customhive/private
 	public static String generateLoadOverwrite(RDBSchema schema) {
 	
 		String newLine = System.getProperty("line.separator");
-		return "FILES=$1 " + newLine + 
+		return "FILES=$@ " + newLine + 
 				"for f in $FILES " + newLine + 
 				"do " + newLine + 
 				"  echo \"Loading $f file...\" " + newLine + 
-				"  hive -e \"LOAD DATA LOCAL INPATH \\\"$1\\\" OVERWRITE INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + 
+				"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" OVERWRITE INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + 
 				"done " + newLine + newLine;
 	}
 	
