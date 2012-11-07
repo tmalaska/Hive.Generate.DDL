@@ -226,7 +226,7 @@ final.table.external.location=customhive/private
 				"for f in $FILES " + newLine + 
 				"do " + newLine + 
 				"  echo \"Loading $f file...\" " + newLine + 
-				"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" OVERWRITE INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + 
+				"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + 
 				"done " + newLine + newLine;
 	}
 	
