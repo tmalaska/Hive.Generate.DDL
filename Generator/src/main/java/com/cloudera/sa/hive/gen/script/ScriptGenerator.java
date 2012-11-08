@@ -79,7 +79,7 @@ final.table.external.location=customhive/private
 	    
 		
 		if (externalLocation != null && externalLocation.isEmpty() == false) {
-			builder.append(" LOCATION \\\"" + externalLocation + "\\\"" + lineSeparator);
+			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + "\\\"" + lineSeparator);
 		}
 		
 	    
