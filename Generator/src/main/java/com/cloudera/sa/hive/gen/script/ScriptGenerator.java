@@ -15,15 +15,10 @@ public class ScriptGenerator {
 	public static String dateFormat = "yyyy.MM.dd";
 	public static SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
 	
-	/**
-	 * temp.table.row.format=ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
-temp.table.stored.as=STORED AS TextFile
-temp.table.add.jars=com.cloudera.sa.hive.example.serde
-final.table.external.location=customhive/private
-	 */
 	public static final String TEMP_TABLE_ROW_FORMAT = "temp.table.row.format";
 	public static final String TEMP_TABLE_STORED_AS = "temp.table.stored.as";
 	public static final String TEMP_TABLE_ADD_JARS = "temp.table.add.jars";
+	public static final String IS_LOAD_FROM_HDFS = "is.load.from.hdfs";
 	public static final String TEMP_TABLE_EXTERNAL_LOCATION = "final.table.external.location";
 	
 	public static String generateHiveTable(RDBSchema schema, Properties prop) {
@@ -31,8 +26,6 @@ final.table.external.location=customhive/private
 		String externalLocation = prop.getProperty(TEMP_TABLE_EXTERNAL_LOCATION);
 		
 		StringBuilder builder = new StringBuilder();
-		
-		
 		
 		builder.append("CREATE ");
 		
@@ -90,11 +83,22 @@ final.table.external.location=customhive/private
 	
 	public static String generateTempHiveTable(RDBSchema schema, Properties prop) {
 		
+		String externalLocation = prop.getProperty(TEMP_TABLE_EXTERNAL_LOCATION);
+		String addJars = prop.getProperty(TEMP_TABLE_ADD_JARS);
+		
 		List<Column> columns = schema.getColumns();
 		
 		StringBuilder builder = new StringBuilder();
 		
-		builder.append("CREATE TABLE " + schema.getTableName() + "_TEMP" + lineSeparator);
+		builder.append("ADD JAR " + addJars + ";" + lineSeparator + lineSeparator);
+		
+		builder.append("CREATE ");
+		
+		if (externalLocation != null && externalLocation.isEmpty() == false) {
+			builder.append("EXTERNAL ");
+		}
+		
+		builder.append("TABLE " + schema.getTableName() + "_TEMP" + lineSeparator);
 		builder.append("( " );
 		
 		boolean isFirstColumn = true;
@@ -115,7 +119,14 @@ final.table.external.location=customhive/private
 		builder.append(prop.getProperty(TEMP_TABLE_ROW_FORMAT) + lineSeparator);
 		
 		
-		builder.append(prop.getProperty(TEMP_TABLE_STORED_AS) + ";");
+		builder.append(prop.getProperty(TEMP_TABLE_STORED_AS));
+		
+		if (externalLocation != null && externalLocation.isEmpty() == false) {
+			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + "_TEMP\\\"" + lineSeparator);
+		}
+		
+	    
+	    builder.append(";");
 		
 		return builder.toString();
 	}	
@@ -219,15 +230,21 @@ final.table.external.location=customhive/private
 		}	
 	}
 
-	public static String generateLoadOverwrite(RDBSchema schema) {
+	public static String generateLoadOverwrite(RDBSchema schema, Properties prop) {
 	
+		String isLoadExternal = prop.getProperty(IS_LOAD_FROM_HDFS);
 		String newLine = System.getProperty("line.separator");
-		return "FILES=$@ " + newLine + 
-				"for f in $FILES " + newLine + 
-				"do " + newLine + 
-				"  echo \"Loading $f file...\" " + newLine + 
-				"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + 
-				"done " + newLine + newLine;
+		
+		if (isLoadExternal == null || isLoadExternal.isEmpty() || isLoadExternal.toLowerCase().equals("true") == false) {
+			return "FILES=$@ " + newLine + 
+					"for f in $FILES " + newLine + 
+					"do " + newLine + 
+					"  echo \"Loading $f file...\" " + newLine + 
+					"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + 
+					"done " + newLine + newLine;
+		} else {
+			return "hive -e \"LOAD DATA INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + newLine;
+		}
 	}
 	
 	public static String generateTestData(RDBSchema schema, int linesOfData) {

@@ -90,7 +90,7 @@ public class App
     	String ls = System.getProperty("line.separator");
     	writerL.write("hive -e \"" + ScriptGenerator.generateTempHiveTable(schema, prop) + "\"");
     	writerL.write(ls + ls);
-    	writerL.write(ScriptGenerator.generateLoadOverwrite(schema));
+    	writerL.write(ScriptGenerator.generateLoadOverwrite(schema, prop));
     	writerL.write(ls + ls);
     	writerL.write("hive -e \"" + ScriptGenerator.generateInsertInto(schema) + "\"");
     	writerL.write(ls + ls);
@@ -114,7 +114,7 @@ public class App
         System.out.println(ScriptGenerator.generateHiveTable(schema, prop));
         System.out.println();
         System.out.println("-- Step3: Load Data to Temp Table");
-        System.out.println(ScriptGenerator.generateLoadOverwrite(schema));
+        System.out.println(ScriptGenerator.generateLoadOverwrite(schema, prop));
         System.out.println();
         System.out.println("-- Step4: Insert Data into Hive Table");
         System.out.println(ScriptGenerator.generateInsertInto(schema));
