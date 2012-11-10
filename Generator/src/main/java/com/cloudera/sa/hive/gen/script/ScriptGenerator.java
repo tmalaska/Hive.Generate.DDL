@@ -15,15 +15,19 @@ public class ScriptGenerator {
 	public static String dateFormat = "yyyy.MM.dd";
 	public static SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
 	
+	public static final String TEMP_POSTFIX = "_TEMP";
+	
 	public static final String TEMP_TABLE_ROW_FORMAT = "temp.table.row.format";
 	public static final String TEMP_TABLE_STORED_AS = "temp.table.stored.as";
 	public static final String TEMP_TABLE_ADD_JARS = "temp.table.add.jars";
 	public static final String IS_LOAD_FROM_HDFS = "is.load.from.hdfs";
-	public static final String TEMP_TABLE_EXTERNAL_LOCATION = "final.table.external.location";
+	public static final String ROOT_EXTERNAL_LOCATION = "root.external.location";
+	public static final String DELETE_TEMP_TABLE_DATA_AFTER_LOAD = "delete.temp.table.external.data.after.load";
+	
 	
 	public static String generateHiveTable(RDBSchema schema, Properties prop) {
 		List<Column> columns = schema.getColumns();
-		String externalLocation = prop.getProperty(TEMP_TABLE_EXTERNAL_LOCATION);
+		String externalLocation = prop.getProperty(ROOT_EXTERNAL_LOCATION);
 		
 		StringBuilder builder = new StringBuilder();
 		
@@ -83,7 +87,7 @@ public class ScriptGenerator {
 	
 	public static String generateTempHiveTable(RDBSchema schema, Properties prop) {
 		
-		String externalLocation = prop.getProperty(TEMP_TABLE_EXTERNAL_LOCATION);
+		String externalLocation = prop.getProperty(ROOT_EXTERNAL_LOCATION);
 		String addJars = prop.getProperty(TEMP_TABLE_ADD_JARS);
 		
 		List<Column> columns = schema.getColumns();
@@ -98,7 +102,7 @@ public class ScriptGenerator {
 			builder.append("EXTERNAL ");
 		}
 		
-		builder.append("TABLE " + schema.getTableName() + "_TEMP" + lineSeparator);
+		builder.append("TABLE " + schema.getTableName() + TEMP_POSTFIX + lineSeparator);
 		builder.append("( " );
 		
 		boolean isFirstColumn = true;
@@ -122,7 +126,7 @@ public class ScriptGenerator {
 		builder.append(prop.getProperty(TEMP_TABLE_STORED_AS));
 		
 		if (externalLocation != null && externalLocation.isEmpty() == false) {
-			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + "_TEMP\\\"" + lineSeparator);
+			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + TEMP_POSTFIX + "\\\"" + lineSeparator);
 		}
 		
 	    
@@ -131,8 +135,20 @@ public class ScriptGenerator {
 		return builder.toString();
 	}	
 	
-	public static String generateDropTempHiveTable(RDBSchema schema) {
-		return "DROP TABLE " + schema.getTableName() + "_TEMP;";
+	public static String generateDropTempHiveTable(RDBSchema schema, Properties prop) {
+		
+		String deleteTempFolder = prop.getProperty(DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
+		String rootExternalLocation = prop.getProperty(ROOT_EXTERNAL_LOCATION, "");
+		
+		StringBuilder builder = new StringBuilder();
+		
+		builder.append("hive -e \"DROP TABLE " + schema.getTableName() + TEMP_POSTFIX + ";\"");
+		
+		if (deleteTempFolder.equals("true") && rootExternalLocation.isEmpty() == false) {
+			builder.append(lineSeparator + lineSeparator + "hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + TEMP_POSTFIX + ";");
+		}
+		
+		return builder.toString();
 	}
 	
 	public static String generateInsertInto(RDBSchema schema) {
@@ -199,7 +215,7 @@ public class ScriptGenerator {
 			builder.append(lineSeparator);
 		}
 		
-		builder.append("FROM " + schema.getTableName() + "_TEMP a;");
+		builder.append("FROM " + schema.getTableName() + TEMP_POSTFIX + " a;");
 		
 		return builder.toString();	
 	}
@@ -240,10 +256,10 @@ public class ScriptGenerator {
 					"for f in $FILES " + newLine + 
 					"do " + newLine + 
 					"  echo \"Loading $f file...\" " + newLine + 
-					"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + 
+					"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + TEMP_POSTFIX + "\"" + newLine + 
 					"done " + newLine + newLine;
 		} else {
-			return "hive -e \"LOAD DATA INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + "_TEMP\"" + newLine + newLine;
+			return "hive -e \"LOAD DATA INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + TEMP_POSTFIX + "\"" + newLine + newLine;
 		}
 	}
 	

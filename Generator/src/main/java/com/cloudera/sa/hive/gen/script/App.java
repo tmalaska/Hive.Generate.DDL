@@ -94,7 +94,7 @@ public class App
     	writerL.write(ls + ls);
     	writerL.write("hive -e \"" + ScriptGenerator.generateInsertInto(schema) + "\"");
     	writerL.write(ls + ls);
-    	writerL.write("hive -e \"" + ScriptGenerator.generateDropTempHiveTable(schema) + "\"");
+    	writerL.write( ScriptGenerator.generateDropTempHiveTable(schema, prop) );
     	writerL.close();
     	
     	FileWriter writerD = new FileWriter(new File(directory + "/" + schema.getTableName() + "_SampleData.txt"));
@@ -120,7 +120,7 @@ public class App
         System.out.println(ScriptGenerator.generateInsertInto(schema));
         System.out.println();
         System.out.println("-- Step5: Drop Temp Table");
-        System.out.println(ScriptGenerator.generateDropTempHiveTable(schema));
+        System.out.println(ScriptGenerator.generateDropTempHiveTable(schema, prop));
         System.out.println();
         System.out.println("-----------------------");
 	}
