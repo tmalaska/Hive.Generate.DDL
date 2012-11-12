@@ -88,14 +88,31 @@ public class App
     	
     	FileWriter writerL = new FileWriter(new File(directory + "/" + schema.getTableName() + "_Load.sh"));
     	String ls = System.getProperty("line.separator");
+    	
+    	writerL.write(ls + ls +"echo -Stage1 " + ls + ls);
     	writerL.write("hive -e \"" + ScriptGenerator.generateTempHiveTable(schema, prop) + "\"");
-    	writerL.write(ls + ls);
+    	writerL.write(ls + ls +"echo -Stage2 "  + ls);
     	writerL.write(ScriptGenerator.generateLoadOverwrite(schema, prop));
-    	writerL.write(ls + ls);
+    	writerL.write(ls + ls +"echo -Stage3 " + ls + ls);
+    	
+    	if (prop.getProperty(Const.SIMULATE_INSERT_INTO, "false").equals("true")) {
+    		writerL.write("hadoop jar hive.gen.script.jar com.cloudera.sa.hive.gen.script.Hive8InsertIntoSimulator prep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		writerL.write(ls + "echo -Stage3.5 " + ls + ls);
+    	}
+    	
     	writerL.write("hive -e \"" + ScriptGenerator.generateInsertInto(schema) + "\"");
-    	writerL.write(ls + ls);
+    	writerL.write(ls + ls +"echo -Stage4 " + ls + ls);
+    	
+    	if (prop.getProperty(Const.SIMULATE_INSERT_INTO, "false").equals("true")) {
+    		writerL.write("hadoop jar hive.gen.script.jar com.cloudera.sa.hive.gen.script.Hive8InsertIntoSimulator complete " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		writerL.write(ls + ls +"echo -Stage4.5 " + ls + ls);
+    	}
+    	
     	writerL.write( ScriptGenerator.generateDropTempHiveTable(schema, prop) );
+    	writerL.write(ls + ls +"echo -Stage5 " + ls + ls);
+    	writerL.write( ScriptGenerator.generateDeleteTempTableCommend(schema, prop) );
     	writerL.close();
+    	
     	
     	FileWriter writerD = new FileWriter(new File(directory + "/" + schema.getTableName() + "_SampleData.txt"));
     	ScriptGenerator.lineSeparator = System.getProperty("line.separator");
@@ -116,12 +133,21 @@ public class App
         System.out.println("-- Step3: Load Data to Temp Table");
         System.out.println(ScriptGenerator.generateLoadOverwrite(schema, prop));
         System.out.println();
+        if (prop.getProperty(Const.SIMULATE_INSERT_INTO, "false").equals("true")) {
+    		System.out.println("hadoop jar hive.gen.script.jar com.cloudera.sa.hive.gen.script.Hive8InsertIntoSimulator prep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		System.out.println();
+    	}
         System.out.println("-- Step4: Insert Data into Hive Table");
         System.out.println(ScriptGenerator.generateInsertInto(schema));
         System.out.println();
+        if (prop.getProperty(Const.SIMULATE_INSERT_INTO, "false").equals("true")) {
+    		System.out.println("hadoop jar hive.gen.script.jar com.cloudera.sa.hive.gen.script.Hive8InsertIntoSimulator complete " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		System.out.println();
+    	}
         System.out.println("-- Step5: Drop Temp Table");
         System.out.println(ScriptGenerator.generateDropTempHiveTable(schema, prop));
         System.out.println();
+        System.out.println(ScriptGenerator.generateDeleteTempTableCommend(schema, prop));
         System.out.println("-----------------------");
 	}
 }

@@ -15,19 +15,11 @@ public class ScriptGenerator {
 	public static String dateFormat = "yyyy.MM.dd";
 	public static SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
 	
-	public static final String TEMP_POSTFIX = "_TEMP";
-	
-	public static final String TEMP_TABLE_ROW_FORMAT = "temp.table.row.format";
-	public static final String TEMP_TABLE_STORED_AS = "temp.table.stored.as";
-	public static final String TEMP_TABLE_ADD_JARS = "temp.table.add.jars";
-	public static final String IS_LOAD_FROM_HDFS = "is.load.from.hdfs";
-	public static final String ROOT_EXTERNAL_LOCATION = "root.external.location";
-	public static final String DELETE_TEMP_TABLE_DATA_AFTER_LOAD = "delete.temp.table.external.data.after.load";
 	
 	
 	public static String generateHiveTable(RDBSchema schema, Properties prop) {
 		List<Column> columns = schema.getColumns();
-		String externalLocation = prop.getProperty(ROOT_EXTERNAL_LOCATION);
+		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION);
 		
 		StringBuilder builder = new StringBuilder();
 		
@@ -87,22 +79,24 @@ public class ScriptGenerator {
 	
 	public static String generateTempHiveTable(RDBSchema schema, Properties prop) {
 		
-		String externalLocation = prop.getProperty(ROOT_EXTERNAL_LOCATION);
-		String addJars = prop.getProperty(TEMP_TABLE_ADD_JARS);
+		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
+		String addJars = prop.getProperty(Const.TEMP_TABLE_ADD_JARS, "");
 		
 		List<Column> columns = schema.getColumns();
 		
 		StringBuilder builder = new StringBuilder();
 		
-		builder.append("ADD JAR " + addJars + ";" + lineSeparator + lineSeparator);
+		if (addJars.isEmpty() == false) {
+			builder.append("ADD JAR " + addJars + ";" + lineSeparator + lineSeparator);
+		}
 		
 		builder.append("CREATE ");
 		
-		if (externalLocation != null && externalLocation.isEmpty() == false) {
+		if (externalLocation.isEmpty() == false) {
 			builder.append("EXTERNAL ");
 		}
 		
-		builder.append("TABLE " + schema.getTableName() + TEMP_POSTFIX + lineSeparator);
+		builder.append("TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + lineSeparator);
 		builder.append("( " );
 		
 		boolean isFirstColumn = true;
@@ -120,13 +114,13 @@ public class ScriptGenerator {
 		
 		builder.append(")" + lineSeparator);
 		
-		builder.append(prop.getProperty(TEMP_TABLE_ROW_FORMAT) + lineSeparator);
+		builder.append(prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT) + lineSeparator);
 		
 		
-		builder.append(prop.getProperty(TEMP_TABLE_STORED_AS));
+		builder.append(prop.getProperty(Const.TEMP_TABLE_STORED_AS));
 		
-		if (externalLocation != null && externalLocation.isEmpty() == false) {
-			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + TEMP_POSTFIX + "\\\"" + lineSeparator);
+		if (externalLocation.isEmpty() == false) {
+			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + Const.TEMP_POSTFIX + "\\\"" + lineSeparator);
 		}
 		
 	    
@@ -137,17 +131,27 @@ public class ScriptGenerator {
 	
 	public static String generateDropTempHiveTable(RDBSchema schema, Properties prop) {
 		
-		String deleteTempFolder = prop.getProperty(DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
-		String rootExternalLocation = prop.getProperty(ROOT_EXTERNAL_LOCATION, "");
+		String deleteTempFolder = prop.getProperty(Const.DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
+		String rootExternalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
 		
 		StringBuilder builder = new StringBuilder();
 		
-		builder.append("hive -e \"DROP TABLE " + schema.getTableName() + TEMP_POSTFIX + ";\"");
+		builder.append("hive -e \"DROP TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"");
+		
+		
+		return builder.toString();
+	}
+	
+	public static String generateDeleteTempTableCommend(RDBSchema schema, Properties prop) {
+
+		String deleteTempFolder = prop.getProperty(Const.DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
+		String rootExternalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
+		
+		StringBuilder builder = new StringBuilder();
 		
 		if (deleteTempFolder.equals("true") && rootExternalLocation.isEmpty() == false) {
-			builder.append(lineSeparator + lineSeparator + "hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + TEMP_POSTFIX + ";");
+			builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.TEMP_POSTFIX );
 		}
-		
 		return builder.toString();
 	}
 	
@@ -215,7 +219,7 @@ public class ScriptGenerator {
 			builder.append(lineSeparator);
 		}
 		
-		builder.append("FROM " + schema.getTableName() + TEMP_POSTFIX + " a;");
+		builder.append("FROM " + schema.getTableName() + Const.TEMP_POSTFIX + " a;");
 		
 		return builder.toString();	
 	}
@@ -248,7 +252,7 @@ public class ScriptGenerator {
 
 	public static String generateLoadOverwrite(RDBSchema schema, Properties prop) {
 	
-		String isLoadExternal = prop.getProperty(IS_LOAD_FROM_HDFS);
+		String isLoadExternal = prop.getProperty(Const.IS_LOAD_FROM_HDFS);
 		String newLine = System.getProperty("line.separator");
 		
 		if (isLoadExternal == null || isLoadExternal.isEmpty() || isLoadExternal.toLowerCase().equals("true") == false) {
@@ -256,10 +260,10 @@ public class ScriptGenerator {
 					"for f in $FILES " + newLine + 
 					"do " + newLine + 
 					"  echo \"Loading $f file...\" " + newLine + 
-					"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + TEMP_POSTFIX + "\"" + newLine + 
+					"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + 
 					"done " + newLine + newLine;
 		} else {
-			return "hive -e \"LOAD DATA INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + TEMP_POSTFIX + "\"" + newLine + newLine;
+			return "hive -e \"LOAD DATA INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + newLine;
 		}
 	}
 	
