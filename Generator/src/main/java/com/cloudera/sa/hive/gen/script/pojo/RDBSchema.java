@@ -50,8 +50,8 @@ public class RDBSchema {
 		this.originalDataFormat = originalDataFormat;
 	}
 
-	public void addColumn(String name, String type, int length, boolean isPartition) {
-		Column column = new Column(name, type, length, isPartition);
+	public void addColumn(String name, String type, int length, boolean isPartition, boolean isPrimaryKey) {
+		Column column = new Column(name, type, length, isPartition, isPrimaryKey);
 		columnList.add(column);
 		columnMap.put(name, column);
 	}
@@ -61,13 +61,15 @@ public class RDBSchema {
 		String type;
 		int length;
 		boolean isPartition;
+		boolean isPrimaryKey;
 		
-		public Column(String name, String type, int length, boolean isPartition) {
+		public Column(String name, String type, int length, boolean isPartition, boolean isPrimaryKey) {
 			super();
 			this.name = name;
 			this.type = type;
 			this.length = length;
 			this.isPartition = isPartition;
+			this.isPrimaryKey = isPrimaryKey;
 		}
 		
 		public String getName() {
@@ -96,6 +98,16 @@ public class RDBSchema {
 		public void setPartition(boolean isPartition) {
 			this.isPartition = isPartition;
 		}
+
+		public boolean isPrimaryKey() {
+			return isPrimaryKey;
+		}
+
+		public void setPrimaryKey(boolean isPrimaryKey) {
+			this.isPrimaryKey = isPrimaryKey;
+		}
+		
+		
 		
 	}
 }

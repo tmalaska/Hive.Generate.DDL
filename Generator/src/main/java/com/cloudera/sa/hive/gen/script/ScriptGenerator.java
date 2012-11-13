@@ -1,5 +1,6 @@
 package com.cloudera.sa.hive.gen.script;
 
+import java.math.BigInteger;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -12,9 +13,6 @@ import com.cloudera.sa.hive.gen.script.pojo.RDBSchema.Column;
 public class ScriptGenerator {
 	
 	public static String lineSeparator = System.getProperty("line.separator");
-	public static String dateFormat = "yyyy.MM.dd";
-	public static SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
-	
 	
 	
 	public static String generateHiveTable(RDBSchema schema, Properties prop) {
@@ -146,16 +144,29 @@ public class ScriptGenerator {
 
 		String deleteTempFolder = prop.getProperty(Const.DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
 		String rootExternalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
+		String insertIntoMode = prop.getProperty(Const.INSERT_INTO_LOGIC, Const.INSERT_INTO_LOGIC_NORMAL);
+		String newLine = System.getProperty("line.separator");
 		
 		StringBuilder builder = new StringBuilder();
 		
 		if (deleteTempFolder.equals("true") && rootExternalLocation.isEmpty() == false) {
-			builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.TEMP_POSTFIX );
+			
+			if (insertIntoMode.equals(Const.INSERT_INTO_LOGIC_HIVE8_SIM)) {
+				builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.EXISTING_TEMP_POST_DIR_NAME + newLine);
+			} else if (insertIntoMode.equals(Const.INSERT_INTO_LOGIC_DELTA)) {
+				builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.EXISTING_TEMP_POST_DIR_NAME + newLine);
+				builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.DELTA_TEMP_POST_DIR_NAME + newLine);
+			}
+			builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.TEMP_POSTFIX + newLine);
 		}
 		return builder.toString();
 	}
 	
-	public static String generateInsertInto(RDBSchema schema) {
+	public static String generateInsertInto(RDBSchema schema, Properties prop) {
+		
+		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "yyyy.MM.dd");
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+		
 		
 		StringBuilder builder = new StringBuilder();
 		
@@ -267,13 +278,16 @@ public class ScriptGenerator {
 		}
 	}
 	
-	public static String generateTestData(RDBSchema schema, int linesOfData) {
+	public static String generateTestData(RDBSchema schema, Properties prop, int startingLine, int linesOfData, char strChar) {
+		
+		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "yyyy.MM.dd");
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
 		
 		List<Column> columns = schema.getColumns();
 		
 		StringBuilder builder = new StringBuilder();
 		
-		for (int i = 0; i < linesOfData; i++) {
+		for (int i = startingLine; i < linesOfData; i++) {
 			boolean isFirstColumn = true;
 			for (Column c: columns) {
 				if (isFirstColumn) {
@@ -283,20 +297,24 @@ public class ScriptGenerator {
 				}
 				String type = c.getType().toUpperCase();
 				if (type.equals("VARCHAR2") || type.equals("CHAR")) {
-					char startChar = 'A';
+					
 					for (int j = 0; j < c.getLength(); j++) {
-						char newChar = (char) ((j%25) + startChar);
-						builder.append(newChar);
+						
+						builder.append(strChar);
 					}
 				} else if (type.equals("NUMBER")) {
-					char startChar = '1';
+					StringBuilder numBuilder = new StringBuilder();
 					for (int j = 0; j < c.getLength(); j++) {
-						char newChar = (char) ((j%8) + startChar);
-						builder.append(newChar);
+						if (j == 0) { numBuilder.append("1"); }
+						else { numBuilder.append("0"); }
 					}
+					BigInteger bi = new BigInteger(numBuilder.toString());
+					bi = bi.add(new BigInteger("" + i));
+					builder.append(bi.toString());
+					
 				} else if (type.equals("DATE")) {
-					long timeStamp = (long) (Math.random() * Long.MAX_VALUE);
-					Date newDate = new Date(timeStamp);
+					
+					Date newDate = new Date();
 					builder.append(simpleDateFormat.format(newDate));
 				}
 			}

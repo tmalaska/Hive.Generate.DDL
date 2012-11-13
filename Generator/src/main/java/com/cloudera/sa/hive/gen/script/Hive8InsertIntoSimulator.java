@@ -9,7 +9,7 @@ import org.apache.hadoop.fs.Path;
 
 public class Hive8InsertIntoSimulator {
 
-	public static final String ROOT_DIR_TEMP_POST_NAME = "_EXISTING_DATA";
+	public static final String ROOT_DIR_TEMP_POST_NAME = Const.EXISTING_TEMP_POST_DIR_NAME;
 	public static final String COPY_STRING = "_copy_";
 	
 	/**
