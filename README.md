@@ -1,14 +1,22 @@
 # Hive.Generate.DDL
 ## Generate Overview
-This project will take s DB schema and generate the following scripts
+This project will take s DB schema and generate the three things:
 
-1. Create Hive Table
-2. Create Temp Load Hive Table
-3. Load local file to Temp Load Hive Table
-4. Move records from Temp Table to Final Hive Table
-5. Drop Temp Load Hive Table
+1. Create Table Scripts
+  - Create an external table or hive user tables
+  - RCFiles
+  - Converts big number to java big integers
 
-It will also generate sample data for you to load into your tables.
+2. Load scripts
+  - Supports insert into hive 8 and 9
+  - Supports delta change loads
+  - Will soon support partitioned delta loads
+  - Load from local or HDFS
+  - Converts Dates
+  - Compresses Data
+
+3. Test Data
+  - Single or multi load test data.
 
 ## UDF Overview
 This project contains the following UDFs
