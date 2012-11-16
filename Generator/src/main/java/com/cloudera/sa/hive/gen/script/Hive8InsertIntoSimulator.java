@@ -6,11 +6,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SecureIOUtils;
+import org.apache.hadoop.mapred.TaskTracker;
+import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 
 public class Hive8InsertIntoSimulator {
 
 	public static final String ROOT_DIR_TEMP_POST_NAME = Const.EXISTING_TEMP_POST_DIR_NAME;
 	public static final String COPY_STRING = "_copy_";
+	
 	
 	/**
 	 * <Stage> <tableName> <possibleExternalLocation>

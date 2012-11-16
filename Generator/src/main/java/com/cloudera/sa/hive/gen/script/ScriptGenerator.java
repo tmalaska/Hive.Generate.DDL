@@ -230,7 +230,14 @@ public class ScriptGenerator {
 			builder.append(lineSeparator);
 		}
 		
-		builder.append("FROM " + schema.getTableName() + Const.TEMP_POSTFIX + " a;");
+		builder.append("FROM " + schema.getTableName() + Const.TEMP_POSTFIX + " a ");
+		
+		if (prop.getProperty(Const.CHECK_FOR_HEADER_RECORDS, "false").equals("true")) {
+			builder.append(lineSeparator);
+		 	builder.append("WHERE a." + columns.get(0).getName() + " != '" + columns.get(0).getName() + "'");
+		}
+		
+		builder.append(";");
 		
 		return builder.toString();	
 	}
@@ -239,6 +246,7 @@ public class ScriptGenerator {
 	
 	private static String convertColumnType(Column column) {
 		String dbType = column.getType().toUpperCase();
+		
 		
 		if (dbType.equals("VARCHAR2") || dbType.equals("CHAR")) {
 			return "STRING";
@@ -286,6 +294,20 @@ public class ScriptGenerator {
 		List<Column> columns = schema.getColumns();
 		
 		StringBuilder builder = new StringBuilder();
+		
+		if (prop.getProperty(Const.CHECK_FOR_HEADER_RECORDS, "false").equals("true")) {
+			boolean isFirstColumn = true;
+			for (Column c: columns) {
+				if (isFirstColumn) {
+					isFirstColumn = false;
+				} else {
+					builder.append("|");
+				}
+				builder.append(c.getName());
+			}
+			builder.append(lineSeparator);
+		}
+		
 		
 		for (int i = startingLine; i < linesOfData; i++) {
 			boolean isFirstColumn = true;

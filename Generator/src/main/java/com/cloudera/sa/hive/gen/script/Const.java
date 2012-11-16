@@ -19,5 +19,5 @@ public class Const {
 	public static final String COMPACTOR_NUM_OF_REDUCER = "compactor.num.of.reducer";
 	public static final String DATE_FORMAT = "date.format";
 	
-	
+	public static final String CHECK_FOR_HEADER_RECORDS = "check.for.header.records";
 }
