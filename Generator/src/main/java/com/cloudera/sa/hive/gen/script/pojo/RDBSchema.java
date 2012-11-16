@@ -50,8 +50,8 @@ public class RDBSchema {
 		this.originalDataFormat = originalDataFormat;
 	}
 
-	public void addColumn(String name, String type, int length, boolean isPartition, boolean isPrimaryKey) {
-		Column column = new Column(name, type, length, isPartition, isPrimaryKey);
+	public void addColumn(String name, String type, int length, int percision, boolean isPartition, boolean isPrimaryKey) {
+		Column column = new Column(name, type, length, percision, isPartition, isPrimaryKey);
 		columnList.add(column);
 		columnMap.put(name, column);
 	}
@@ -60,14 +60,16 @@ public class RDBSchema {
 		String name;
 		String type;
 		int length;
+		int percision;
 		boolean isPartition;
 		boolean isPrimaryKey;
 		
-		public Column(String name, String type, int length, boolean isPartition, boolean isPrimaryKey) {
+		public Column(String name, String type, int length, int percision, boolean isPartition, boolean isPrimaryKey) {
 			super();
 			this.name = name;
 			this.type = type;
 			this.length = length;
+			this.percision = percision;
 			this.isPartition = isPartition;
 			this.isPrimaryKey = isPrimaryKey;
 		}
@@ -89,6 +91,15 @@ public class RDBSchema {
 		}
 		public void setLength(int length) {
 			this.length = length;
+		}
+		
+
+		public int getPercision() {
+			return percision;
+		}
+
+		public void setPercision(int percision) {
+			this.percision = percision;
 		}
 
 		public boolean isPartition() {

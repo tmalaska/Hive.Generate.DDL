@@ -67,12 +67,17 @@ public class App
             		length = Integer.parseInt(nextLine[4]);
             	}
             	
+            	int percistion = 0;
+            	if (nextLine[5].isEmpty() == false) {
+            		percistion = Integer.parseInt(nextLine[5]);
+            	}
+            	
             	boolean isPrimaryKey = false;
             	if (nextLine.length > 7 && nextLine[7].equals("Y")) {
             		isPrimaryKey = true;
             	}
             	
-            	schema.addColumn(nextLine[2], nextLine[3], length, false, isPrimaryKey);
+            	schema.addColumn(nextLine[2], nextLine[3], length, percistion, false, isPrimaryKey);
             	
             }
         	

@@ -13,7 +13,7 @@ public class IoTest {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException {
-		
+		/*
 
 		Configuration config = new Configuration();
 		FileSystem hdfs = FileSystem.get(config);
@@ -25,7 +25,11 @@ public class IoTest {
 		System.out.println("UriPath:" + fs.getPath().toUri().getPath());
 		System.out.println("UriRawPath:" + fs.getPath().toUri().getRawPath());
 		hdfs.close();
-
+*/
+		System.out.println( Double.parseDouble("1234567891.1234567891"));
+		System.out.println( Double.parseDouble("993456789.923456789"));
+		System.out.println( Double.parseDouble("1234567.1234567"));
+		System.out.println( Double.parseDouble("12345678.12345678"));
 	}
 
 }

@@ -213,16 +213,24 @@ public class ScriptGenerator {
 					//unix_timestamp(string date, string pattern)
 					builder.append("from_unixtime(unix_timestamp(a." + c.getName() + ", '" + dateFormat + "'))");
 				} else if (type.equals("NUMBER")) {
-					if (c.getLength() > 18) {
-						builder.append("a." + c.getName());
-					} else if (c.getLength() > 9) {
-						builder.append("cast(a." + c.getName() + " as BIGINT)");
-					} else if (c.getLength() > 4) {
-						builder.append("cast(a." + c.getName() + " as INT)");
-					} else if (c.getLength() > 2) {
-						builder.append("cast(a." + c.getName() + " as SMALLINT)");
+					if (c.getPercision() == 0) {
+						if (c.getLength() > 18) {
+							builder.append("a." + c.getName());
+						} else if (c.getLength() > 9) {
+							builder.append("cast(a." + c.getName() + " as BIGINT)");
+						} else if (c.getLength() > 4) {
+							builder.append("cast(a." + c.getName() + " as INT)");
+						} else if (c.getLength() > 2) {
+							builder.append("cast(a." + c.getName() + " as SMALLINT)");
+						} else {
+							builder.append("cast(a." + c.getName() + " as TINYINT)");
+						}
 					} else {
-						builder.append("cast(a." + c.getName() + " as TINYINT)");
+						if (c.getLength() > 17) {
+							builder.append("a." + c.getName());
+						} else {
+							builder.append("cast(a." + c.getName() + " as DOUBLE)");
+						}
 					}
 				}
 				
@@ -251,17 +259,26 @@ public class ScriptGenerator {
 		if (dbType.equals("VARCHAR2") || dbType.equals("CHAR")) {
 			return "STRING";
 		} else if (dbType.equals("NUMBER")) {
-			if (column.getLength() > 18) {
-				return "STRING";
-			} else if (column.getLength() > 9) {
-				return "BIGINT";
-			} else if (column.getLength() > 4) {
-				return "INT";
-			} else if (column.getLength() > 2) {
-				return "SMALLINT";
+			if (column.getPercision() == 0) {
+				if (column.getLength() > 18) {
+					return "STRING";
+				} else if (column.getLength() > 9) {
+					return "BIGINT";
+				} else if (column.getLength() > 4) {
+					return "INT";
+				} else if (column.getLength() > 2) {
+					return "SMALLINT";
+				} else {
+					return "TINYINT";
+				}	
 			} else {
-				return "TINYINT";
+				if (column.getLength() > 17) {
+					return "STRING";
+				} else {
+					return "DOUBLE";
+				}
 			}
+			
 		} else if (dbType.equals("DATE")) {
 			return "TIMESTAMP";
 		} else {
@@ -327,12 +344,19 @@ public class ScriptGenerator {
 				} else if (type.equals("NUMBER")) {
 					StringBuilder numBuilder = new StringBuilder();
 					for (int j = 0; j < c.getLength(); j++) {
+						//add possible percision
+						if (c.getPercision() > 0) {
+							if (c.getPercision() == c.getLength() - j) {
+								numBuilder.append(".");
+							}
+						}
+						//add number
 						if (j == 0) { numBuilder.append("1"); }
 						else { numBuilder.append("0"); }
 					}
-					BigInteger bi = new BigInteger(numBuilder.toString());
-					bi = bi.add(new BigInteger("" + i));
-					builder.append(bi.toString());
+					//BigInteger bi = new BigInteger(numBuilder.toString());
+					//bi = bi.add(new BigInteger("" + i));
+					builder.append(numBuilder);
 					
 				} else if (type.equals("DATE")) {
 					
