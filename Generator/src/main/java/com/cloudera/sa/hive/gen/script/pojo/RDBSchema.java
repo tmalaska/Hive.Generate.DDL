@@ -5,7 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.mapred.TaskTracker;
+
 public class RDBSchema {
+	
 	
 	private Map<String, Column> columnMap = new HashMap<String, Column>();
 	private List<Column> columnList = new ArrayList<Column>();

@@ -1,6 +1,5 @@
 package com.cloudera.sa.hive.gen.script;
 
-import java.math.BigInteger;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -165,7 +164,7 @@ public class ScriptGenerator {
 	public static String generateInsertInto(RDBSchema schema, Properties prop) {
 		
 		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "yyyy.MM.dd");
-		SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+		boolean doTrimOnString = prop.getProperty(Const.TRIM_STRING_VALUES, "false").equals("true");
 		
 		
 		StringBuilder builder = new StringBuilder();
@@ -208,7 +207,11 @@ public class ScriptGenerator {
 				
 				String type = c.getType().toUpperCase();
 				if (type.equals("VARCHAR2") || type.equals("CHAR")) {
-					builder.append("a." + c.getName());	
+					if (doTrimOnString) { builder.append("trim("); }
+					
+					builder.append("a." + c.getName());
+					
+					if (doTrimOnString) { builder.append(")"); }
 				} else if (type.equals("DATE")) {
 					//unix_timestamp(string date, string pattern)
 					builder.append("from_unixtime(unix_timestamp(a." + c.getName() + ", '" + dateFormat + "'))");
