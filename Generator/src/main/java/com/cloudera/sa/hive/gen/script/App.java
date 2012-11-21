@@ -7,6 +7,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.apache.hadoop.hive.shims.Hadoop23Shims;
+
 import au.com.bytecode.opencsv.CSVReader;
 
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema;
@@ -20,6 +22,8 @@ public class App
 {
     public static void main( String[] args ) throws IOException
     {	
+    	Hadoop23Shims a;
+    	
     	if (args.length != 3) {
     		System.out.println("hiveGen - help");
     		System.out.println("");
@@ -125,7 +129,13 @@ public class App
 
 	private static String generateMainHiveTableCreatationScript(
 			RDBSchema schema, Properties prop) {
-		return "hive -e \"" + ScriptGenerator.generateHiveTable(schema, prop) + "\"";
+		String ls = System.getProperty("line.separator");
+
+    	;
+		return "hive -e \"" + ScriptGenerator.generateHiveTable(schema, prop) + "\"" + 
+    		ls +
+    		ls +
+    		ScriptGenerator.generateChgrpExternalDir(schema, prop);
 	}
     
 	private static String generateLoadDataScript(RDBSchema schema, Properties prop) {
@@ -137,6 +147,8 @@ public class App
     	
     	builder.append(ls + ls +"echo --- Stage: Create Temp Table " + ls + ls);
     	builder.append("hive -e \"" + ScriptGenerator.generateTempHiveTable(schema, prop) + "\"");
+    	
+    	
     	builder.append(ls + ls +"echo --- Stage: Loading data into Temp Table "  + ls);
     	builder.append(ScriptGenerator.generateLoadOverwrite(schema, prop));
     	builder.append(ls + ls +"echo --- Stage: Preping " + ls + ls);

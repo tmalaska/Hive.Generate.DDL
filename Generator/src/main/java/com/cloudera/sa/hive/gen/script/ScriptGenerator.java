@@ -14,6 +14,16 @@ public class ScriptGenerator {
 	public static String lineSeparator = System.getProperty("line.separator");
 	
 	
+	public static String generateChgrpExternalDir(RDBSchema schema, Properties prop) {
+		String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "");
+		String externalLoc = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
+		if (externalGroup.isEmpty() == false && externalLoc.isEmpty() == false) {
+			return "hadoop fs -chgrp " + externalLoc + "/" + schema.getTableName() + " " + externalGroup + lineSeparator  + lineSeparator;
+		} else {
+			return "";
+		}
+	}
+	
 	public static String generateHiveTable(RDBSchema schema, Properties prop) {
 		List<Column> columns = schema.getColumns();
 		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION);
