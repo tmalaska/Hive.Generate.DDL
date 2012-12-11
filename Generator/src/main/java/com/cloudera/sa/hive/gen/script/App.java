@@ -81,7 +81,12 @@ public class App
             		isPrimaryKey = true;
             	}
             	
-            	schema.addColumn(nextLine[2], nextLine[3], length, percistion, false, isPrimaryKey);
+            	boolean isPartition = false;
+            	if (nextLine.length > 8 && nextLine[8].equals("Y")) {
+            		isPartition = true;
+            	}
+            	
+            	schema.addColumn(nextLine[2], nextLine[3], length, percistion, isPartition, isPrimaryKey);
             	
             }
         	
@@ -116,6 +121,11 @@ public class App
         	writerD2.write(ScriptGenerator.generateTestData(schema, prop, 5, 15,'B'));
         	writerD2.close();
     	}
+    	
+    	FileWriter writerBp = new FileWriter(new File(directory + "/" + schema.getTableName() + "_BackPort.sh"));
+    	writerBp.write(generateBackPortScript(schema, prop));
+    	writerBp.close();
+    	
     }
     
 	private static void tableConsoleOutput(RDBSchema schema, Properties prop) {
@@ -135,12 +145,28 @@ public class App
 		return "hive -e \"" + ScriptGenerator.generateHiveTable(schema, prop) + "\"" + 
     		ls +
     		ls +
-    		ScriptGenerator.generateChgrpExternalDir(schema, prop);
+    		ScriptGenerator.generateChExternalDir(schema, prop);
 	}
     
+	private static String generateBackPortScript(RDBSchema schema, Properties prop) {
+		
+		StringBuilder builder = new StringBuilder();
+		String ls = System.getProperty("line.separator");
+    	
+    	builder.append(ls + ls +"echo --- Stage: Create Temp Table " + ls + ls);
+    	builder.append("hive -e \"" + ScriptGenerator.generateBackPortHiveTable(schema, prop) + "\"");
+    	builder.append(ls + ls + "echo --- Stage: Insert into Hive Table " + ls + ls);
+    	builder.append("hive -e \"" + ScriptGenerator.generateBackPort(schema, prop) + "\"");
+    	
+    	
+    	return builder.toString();
+	}
+	
 	private static String generateLoadDataScript(RDBSchema schema, Properties prop) {
     	String insertInfoLogic = prop.getProperty(Const.INSERT_INTO_LOGIC, "normal");
     	String deleteTempTableData = prop.getProperty(Const.DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
+    	boolean skipCopyStep = prop.getProperty(Const.SKIP_COPY_STEP, "false").equals("true");
+    	boolean dropTempTableAfterLoad = prop.getProperty(Const.DROP_TEMP_TABLE_AFTER_LOAD, "true").equals("true");
     	
 		StringBuilder builder = new StringBuilder();
 		String ls = System.getProperty("line.separator");
@@ -148,11 +174,12 @@ public class App
     	builder.append(ls + ls +"echo --- Stage: Create Temp Table " + ls + ls);
     	builder.append("hive -e \"" + ScriptGenerator.generateTempHiveTable(schema, prop) + "\"");
     	
+    	if (skipCopyStep == false) {
+	    	builder.append(ls + ls +"echo --- Stage: Loading data into Temp Table "  + ls);
+	    	builder.append(ScriptGenerator.generateLoadOverwrite(schema, prop));
+	    	builder.append(ls + ls +"echo --- Stage: Preping " + ls + ls);
+    	}
     	
-    	builder.append(ls + ls +"echo --- Stage: Loading data into Temp Table "  + ls);
-    	builder.append(ScriptGenerator.generateLoadOverwrite(schema, prop));
-    	builder.append(ls + ls +"echo --- Stage: Preping " + ls + ls);
-    	    	
     	if (insertInfoLogic.equals(Const.INSERT_INTO_LOGIC_HIVE8_SIM)) {
     		builder.append("hadoop jar hive.gen.script.jar com.cloudera.sa.hive.gen.script.Hive8InsertIntoSimulator prep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
     		
@@ -189,8 +216,10 @@ public class App
     				numOfReducers);
     	}  
     	
-    	builder.append(ls + ls +"echo --- Stage: Drop Hive Temp Table " + ls + ls);
-    	builder.append( ScriptGenerator.generateDropTempHiveTable(schema, prop) );
+    	if (dropTempTableAfterLoad) {
+	    	builder.append(ls + ls +"echo --- Stage: Drop Hive Temp Table " + ls + ls);
+	    	builder.append( ScriptGenerator.generateDropTempHiveTable(schema, prop) );
+    	}
     	
     	if (deleteTempTableData.equals("true")) {
         	builder.append(ls + ls +"echo --- Stage: Delete Temp Table Data From HDFS " + ls + ls);

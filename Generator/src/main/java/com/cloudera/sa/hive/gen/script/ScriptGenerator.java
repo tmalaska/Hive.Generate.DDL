@@ -5,20 +5,36 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.hadoop.hive.ql.io.RCFile;
+
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema;
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema.Column;
 
-
 public class ScriptGenerator {
+	
+	
 	
 	public static String lineSeparator = System.getProperty("line.separator");
 	
 	
-	public static String generateChgrpExternalDir(RDBSchema schema, Properties prop) {
-		String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "");
+	public static String generateChExternalDir(RDBSchema schema, Properties prop) {
+		
+		String ls = System.getProperty("line.separator");
+		
 		String externalLoc = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
-		if (externalGroup.isEmpty() == false && externalLoc.isEmpty() == false) {
-			return "hadoop fs -chgrp " + externalLoc + "/" + schema.getTableName() + " " + externalGroup + lineSeparator  + lineSeparator;
+		if ( externalLoc.isEmpty() == false) {
+			
+			String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "");
+			String externalPermission = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_PERMISSIONS, "");
+			
+			StringBuilder builder = new StringBuilder();
+			if (externalGroup.isEmpty() == false) {
+				builder.append("hadoop fs -chgrp " + externalGroup + " " + externalLoc + "/" + schema.getTableName()   + ls  + ls);
+			}
+			if (externalPermission.isEmpty() == false) {
+				builder.append("hadoop fs -chmod " + externalPermission + " " + externalLoc + "/" + schema.getTableName() +   ls  + ls);
+			}
+			return builder.toString();
 		} else {
 			return "";
 		}
@@ -85,6 +101,14 @@ public class ScriptGenerator {
 	}
 	
 	public static String generateTempHiveTable(RDBSchema schema, Properties prop) {
+		return generateBasicStringHiveTable(schema, prop, Const.TEMP_POSTFIX);
+	}
+	
+	public static String generateBackPortHiveTable(RDBSchema schema, Properties prop) {
+		return generateBasicStringHiveTable(schema, prop, Const.BACKPORT_POSTFIX);
+	}
+	
+	public static String generateBasicStringHiveTable(RDBSchema schema, Properties prop, String postFix) {
 		
 		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
 		String addJars = prop.getProperty(Const.TEMP_TABLE_ADD_JARS, "");
@@ -103,7 +127,7 @@ public class ScriptGenerator {
 			builder.append("EXTERNAL ");
 		}
 		
-		builder.append("TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + lineSeparator);
+		builder.append("TABLE " + schema.getTableName() + postFix + lineSeparator);
 		builder.append("( " );
 		
 		boolean isFirstColumn = true;
@@ -127,7 +151,7 @@ public class ScriptGenerator {
 		builder.append(prop.getProperty(Const.TEMP_TABLE_STORED_AS));
 		
 		if (externalLocation.isEmpty() == false) {
-			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + Const.TEMP_POSTFIX + "\\\"" + lineSeparator);
+			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + postFix + "\\\"" + lineSeparator);
 		}
 		
 	    
@@ -138,13 +162,9 @@ public class ScriptGenerator {
 	
 	public static String generateDropTempHiveTable(RDBSchema schema, Properties prop) {
 		
-		String deleteTempFolder = prop.getProperty(Const.DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
-		String rootExternalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
-		
 		StringBuilder builder = new StringBuilder();
 		
 		builder.append("hive -e \"DROP TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"");
-		
 		
 		return builder.toString();
 	}
@@ -171,17 +191,53 @@ public class ScriptGenerator {
 		return builder.toString();
 	}
 	
+	public static String  generateBackPort(RDBSchema schema, Properties prop) {
+		
+		StringBuilder builder = new StringBuilder();
+		
+		builder.append("INSERT INTO TABLE " + schema.getTableName() + Const.BACKPORT_POSTFIX + " ");
+		
+		builder.append(lineSeparator + "SELECT " + lineSeparator);
+		
+		List<Column> columns = schema.getColumns();
+		if (columns.size() > 0) {
+			boolean isFirstColumn = true;
+			for (Column c: columns) {
+				if (isFirstColumn) {
+					isFirstColumn = false;
+				} else {
+					builder.append(", " + lineSeparator);
+				}
+				builder.append("    ");
+					
+				builder.append("a." + c.getName());
+						
+			}
+			builder.append(lineSeparator);
+		}
+		
+		builder.append("FROM " + schema.getTableName() + " a ");
+		
+		builder.append(";");
+		
+		return builder.toString();
+	}
+	
 	public static String generateInsertInto(RDBSchema schema, Properties prop) {
 		
-		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "yyyy.MM.dd");
-		boolean doTrimOnString = prop.getProperty(Const.TRIM_STRING_VALUES, "false").equals("true");
+		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "dd/MM/yyyy");
+		String datetimeFormat = prop.getProperty(Const.DATETIME_FORMAT, "dd/MM/yyyy HH:mm:ss");
+		boolean applyTeradataFormatting = prop.getProperty(Const.APPLY_TERADATA_FORMATTING, "false").equals("true");
 		
+		boolean doTrimOnString = prop.getProperty(Const.TRIM_STRING_VALUES, "false").equals("true");
+		String compressionCodec = prop.getProperty(Const.COMPRESSION_CODEC, "org.apache.hadoop.io.compress.SnappyCodec");
 		
 		StringBuilder builder = new StringBuilder();
 		
 		builder.append("SET hive.exec.compress.output=true;" + lineSeparator); 
 		builder.append("SET io.seqfile.compression.type=BLOCK;" + lineSeparator);
-		builder.append("SET mapred.output.compression.codec = org.apache.hadoop.io.compress.SnappyCodec;" + lineSeparator);
+		builder.append("SET mapred.output.compression.codec = " + compressionCodec + ";" + lineSeparator);
+		builder.append("SET hive.io.rcfile.record.buffer.size = " + Math.max((4 * 1024 * 1024), ((schema.getColumns().size() / 3) * 1024 * 1024)) + ";"  + lineSeparator);
 		builder.append(lineSeparator);
 		
 		builder.append("INSERT INTO TABLE " + schema.getTableName() + " ");
@@ -216,33 +272,60 @@ public class ScriptGenerator {
 				builder.append("    ");
 				
 				String type = c.getType().toUpperCase();
-				if (type.equals("VARCHAR2") || type.equals("CHAR")) {
-					if (doTrimOnString) { builder.append("trim("); }
+				if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("VARCHAR")) {
+					if (doTrimOnString || applyTeradataFormatting) { builder.append("trim("); }
 					
 					builder.append("a." + c.getName());
 					
-					if (doTrimOnString) { builder.append(")"); }
+					if (doTrimOnString || applyTeradataFormatting) { builder.append(")"); }
 				} else if (type.equals("DATE")) {
-					//unix_timestamp(string date, string pattern)
-					builder.append("from_unixtime(unix_timestamp(a." + c.getName() + ", '" + dateFormat + "'))");
-				} else if (type.equals("NUMBER")) {
+					String fieldName = "a." + c.getName();
+					if (applyTeradataFormatting) {
+						fieldName = "trim(" + fieldName + ")";
+					}
+					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + dateFormat + "'))");
+				} else if (type.equals("DATETIME")) {
+					String fieldName = "a." + c.getName();
+					if (applyTeradataFormatting) {
+						fieldName = "trim(" + fieldName + ")";
+					}
+					
+					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + datetimeFormat + "'))");
+				} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT")) {
+					String fieldName = "a." + c.getName();
 					if (c.getPercision() == 0) {
+						
+						if (applyTeradataFormatting) {
+							fieldName = "trim(" + fieldName + ")";
+							if (type.equals("DECIMAL")) {
+								fieldName = "regexp_replace(" + fieldName + ",\\\"\\\\\\.[0-9]*\\\",\\\"\\\")";
+							}
+						} 
 						if (c.getLength() > 18) {
-							builder.append("a." + c.getName());
-						} else if (c.getLength() > 9) {
-							builder.append("cast(a." + c.getName() + " as BIGINT)");
-						} else if (c.getLength() > 4) {
-							builder.append("cast(a." + c.getName() + " as INT)");
-						} else if (c.getLength() > 2) {
-							builder.append("cast(a." + c.getName() + " as SMALLINT)");
+							builder.append(fieldName);
+						} else if (c.getLength() > 9 || type.equals("BIGINT")) {
+							builder.append("cast(" + fieldName + " as BIGINT)");
+						} else if (c.getLength() > 4 || type.equals("INTEGER")) {
+							builder.append("cast(" + fieldName + " as INT)");
+						} else if (c.getLength() > 2 || type.equals("SMALLINT")) {
+							builder.append("cast(" + fieldName + " as SMALLINT)");
 						} else {
-							builder.append("cast(a." + c.getName() + " as TINYINT)");
-						}
+							builder.append("cast(" + fieldName + " as TINYINT)");
+						}	
+						
+						
 					} else {
+						
+						if (applyTeradataFormatting) {
+							fieldName = "trim(" + fieldName + ")";
+							if (type.equals("DECIMAL")) {
+								fieldName = "regexp_replace(" + fieldName + ",\\\"^\\\\\\.\\\",\\\"0.\\\")";
+							}
+						}
 						if (c.getLength() > 17) {
-							builder.append("a." + c.getName());
+							builder.append(fieldName);
 						} else {
-							builder.append("cast(a." + c.getName() + " as DOUBLE)");
+							builder.append("cast(" + fieldName + " as DOUBLE)");
 						}
 					}
 				}
@@ -269,17 +352,17 @@ public class ScriptGenerator {
 		String dbType = column.getType().toUpperCase();
 		
 		
-		if (dbType.equals("VARCHAR2") || dbType.equals("CHAR")) {
+		if (dbType.equals("VARCHAR2") || dbType.equals("CHAR")|| dbType.equals("VARCHAR")) {
 			return "STRING";
-		} else if (dbType.equals("NUMBER")) {
+		} else if (dbType.equals("NUMBER") || dbType.equals("DECIMAL") || dbType.equals("BYTEINT")  || dbType.equals("SMALLINT") || dbType.equals("INTEGER")|| dbType.equals("BIGINT")) {
 			if (column.getPercision() == 0) {
 				if (column.getLength() > 18) {
 					return "STRING";
-				} else if (column.getLength() > 9) {
+				} else if (column.getLength() > 9 || dbType.equals("BIGINT")) {
 					return "BIGINT";
-				} else if (column.getLength() > 4) {
+				} else if (column.getLength() > 4 || dbType.equals("INTEGER")) {
 					return "INT";
-				} else if (column.getLength() > 2) {
+				} else if (column.getLength() > 2 || dbType.equals("SMALLINT")) {
 					return "SMALLINT";
 				} else {
 					return "TINYINT";
@@ -292,7 +375,7 @@ public class ScriptGenerator {
 				}
 			}
 			
-		} else if (dbType.equals("DATE")) {
+		} else if (dbType.equals("DATE") || dbType.equals("DATETIME")) {
 			return "TIMESTAMP";
 		} else {
 			throw new RuntimeException("Currently doesn't support " + dbType);
@@ -312,14 +395,16 @@ public class ScriptGenerator {
 					"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + 
 					"done " + newLine + newLine;
 		} else {
-			return "hive -e \"LOAD DATA INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + newLine;
+			return "hive -e \"LOAD DATA INPATH \\\"$1\\\" INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + newLine;
 		}
 	}
 	
 	public static String generateTestData(RDBSchema schema, Properties prop, int startingLine, int linesOfData, char strChar) {
 		
-		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "yyyy.MM.dd");
+		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "dd/MM/yyyy");
+		String datetimeFormat = prop.getProperty(Const.DATETIME_FORMAT, "dd/MM/yyyy HH:mm:ss");
 		SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+		SimpleDateFormat simpleDateTimeFormat = new SimpleDateFormat(datetimeFormat);
 		
 		List<Column> columns = schema.getColumns();
 		
@@ -348,13 +433,13 @@ public class ScriptGenerator {
 					builder.append("|");
 				}
 				String type = c.getType().toUpperCase();
-				if (type.equals("VARCHAR2") || type.equals("CHAR")) {
+				if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("CLOB")|| type.equals("VARCHAR")) {
 					
 					for (int j = 0; j < c.getLength(); j++) {
 						
 						builder.append(strChar);
 					}
-				} else if (type.equals("NUMBER")) {
+				} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT")) {
 					StringBuilder numBuilder = new StringBuilder();
 					for (int j = 0; j < c.getLength(); j++) {
 						//add possible percision
@@ -375,6 +460,10 @@ public class ScriptGenerator {
 					
 					Date newDate = new Date();
 					builder.append(simpleDateFormat.format(newDate));
+				} else if (type.equals("DATETIME")) {
+					
+					Date newDate = new Date();
+					builder.append(simpleDateTimeFormat.format(newDate));
 				}
 			}
 			if (i < linesOfData - 1) {
