@@ -48,7 +48,7 @@
             <descriptorRef>jar-with-dependencies</descriptorRef>
           </descriptorRefs>
           <appendAssemblyId>false</appendAssemblyId>
-          <finalName>hive.backport.compare</finalName>      
+          <finalName>hive.loader.utils</finalName>      
         </configuration>
         <executions>
           <execution>

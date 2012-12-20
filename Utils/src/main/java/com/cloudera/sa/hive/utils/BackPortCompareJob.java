@@ -1,4 +1,4 @@
-package com.cloudera.sa.hive.backport.compare;
+package com.cloudera.sa.hive.utils;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -23,6 +24,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
  */
 public class BackPortCompareJob {
 
+	
 	public static final String DELIMITER_CONFIG = "backport.delimiter";
 	public static final String PRIMARY_KEYS_CONFIG = "backport.primaryKeys";
 	public static final String GOLD_SRC_CONFIG = "backport.input.gold.src";

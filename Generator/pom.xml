@@ -74,6 +74,11 @@
           </descriptorRefs>
           <appendAssemblyId>false</appendAssemblyId>
           <finalName>hive.gen.script</finalName>
+          <archive>
+            <manifest>
+              <mainClass>com.cloudera.sa.hive.gen.script.App</mainClass>
+            </manifest>
+          </archive>
         </configuration>
         <executions>
           <execution>

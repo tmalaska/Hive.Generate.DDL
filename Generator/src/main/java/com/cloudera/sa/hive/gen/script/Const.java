@@ -39,4 +39,6 @@ public class Const {
 	public static final String ROOT_EXTERNAL_LOCATION_PERMISSIONS = "root.external.location.permissions";
 	
 	public static final String CHECK_FOR_HEADER_RECORDS = "check.for.header.records";
+	
+	public static final String USE_DATABASE = "use.database";
 }

@@ -1,4 +1,4 @@
-package com.cloudera.sa.hive.gen.script;
+package com.cloudera.sa.hive.utils;
 
 import java.io.IOException;
 
@@ -6,13 +6,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.SecureIOUtils;
-import org.apache.hadoop.mapred.TaskTracker;
-import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
+
 
 public class Hive8InsertIntoSimulator {
 
-	public static final String ROOT_DIR_TEMP_POST_NAME = Const.EXISTING_TEMP_POST_DIR_NAME;
+	public static final String ROOT_DIR_TEMP_POST_NAME = "_EXISTING_TEMP";
+	
 	public static final String COPY_STRING = "_copy_";
 	
 	
@@ -45,7 +44,7 @@ public class Hive8InsertIntoSimulator {
 			hdfs.mkdirs(rootFolder);
 			System.out.println(hdfs.listStatus(rootFolder).length + " files is " + rootFolder);
 			System.out.println(hdfs.listStatus(tempRootFolder).length + " files is " + tempRootFolder);
-		}else {
+		}else if (stage.equals("reinsert")){
 			FileStatus rootFolderStatus = hdfs.getFileStatus(rootFolder);
 			
 			FileStatus[] rootFolderFiles = hdfs.listStatus(rootFolder);

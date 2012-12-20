@@ -284,7 +284,7 @@ public class ScriptGenerator {
 						fieldName = "trim(" + fieldName + ")";
 					}
 					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + dateFormat + "'))");
-				} else if (type.equals("DATETIME")) {
+				} else if (type.equals("DATETIME") || type.equals("TIMESTAMP")) {
 					String fieldName = "a." + c.getName();
 					if (applyTeradataFormatting) {
 						fieldName = "trim(" + fieldName + ")";
@@ -375,7 +375,7 @@ public class ScriptGenerator {
 				}
 			}
 			
-		} else if (dbType.equals("DATE") || dbType.equals("DATETIME")) {
+		} else if (dbType.equals("DATE") || dbType.equals("DATETIME") || dbType.equals("TIMESTAMP")) {
 			return "TIMESTAMP";
 		} else {
 			throw new RuntimeException("Currently doesn't support " + dbType);
@@ -460,7 +460,7 @@ public class ScriptGenerator {
 					
 					Date newDate = new Date();
 					builder.append(simpleDateFormat.format(newDate));
-				} else if (type.equals("DATETIME")) {
+				} else if (type.equals("DATETIME") || type.equals("DATETIME")) {
 					
 					Date newDate = new Date();
 					builder.append(simpleDateTimeFormat.format(newDate));
