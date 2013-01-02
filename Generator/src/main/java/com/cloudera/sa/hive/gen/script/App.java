@@ -87,10 +87,7 @@ public class App
             	}
             	
             	schema.addColumn(nextLine[2], nextLine[3], length, percistion, isPartition, isPrimaryKey);
-            	
             }
-        	
-        	
         }
         tableFileOutput(schema, outputDirector, prop);
         tableConsoleOutput(schema, prop);
@@ -103,13 +100,31 @@ public class App
 
     	ScriptGenerator.lineSeparator = " ";
     	
+		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION);
+		String database = prop.getProperty(Const.USE_DATABASE, "default");
+		String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "supergroup");
+		String externalPermission = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_PERMISSIONS, "770");
+    	
     	FileWriter writerC = new FileWriter(new File(directory + "/" + schema.getTableName() + "_Create.sh"));
-    	writerC.write(generateMainHiveTableCreatationScript(schema, prop));
+    	writerC.write(generateMainHiveTableCreatationScript(schema, externalLocation, database, externalGroup, externalPermission));
     	writerC.close();
 
     	FileWriter writerL = new FileWriter(new File(directory + "/" + schema.getTableName() + "_Load.sh"));
     	writerL.write(generateLoadDataScript(schema, prop));
     	writerL.close();
+    	
+    	FileWriter writerBp = new FileWriter(new File(directory + "/" + schema.getTableName() + "_BackPort.sh"));
+    	writerBp.write(generateBackPortScript(schema, prop));
+    	writerBp.close();
+    	
+    	FileWriter writerChDb = new FileWriter(new File(directory + "/" + schema.getTableName() + "_ChangeDatabase.sh"));
+    	writerChDb.write(generateChangeDatabaseScript(schema, prop));
+    	writerChDb.close();
+    	
+    	FileWriter writerChED = new FileWriter(new File(directory + "/" + schema.getTableName() + "_ChangeExternalDirectory.sh"));
+    	writerChED.write(generateChangeExternalDirectoryScript(schema, prop));
+    	writerChED.close();
+    	
     	
     	ScriptGenerator.lineSeparator = System.getProperty("line.separator");
     	FileWriter writerD = new FileWriter(new File(directory + "/" + schema.getTableName() + "_SampleData.Init.txt"));
@@ -122,32 +137,78 @@ public class App
         	writerD2.close();
     	}
     	
-    	FileWriter writerBp = new FileWriter(new File(directory + "/" + schema.getTableName() + "_BackPort.sh"));
-    	writerBp.write(generateBackPortScript(schema, prop));
-    	writerBp.close();
     	
     }
     
 	private static void tableConsoleOutput(RDBSchema schema, Properties prop) {
+		
+		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION);
+		String database = prop.getProperty(Const.USE_DATABASE, "default");
+		String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "");
+		String externalPermission = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_PERMISSIONS, "");
+		
 		ScriptGenerator.lineSeparator = System.getProperty("line.separator");
 		System.out.println("--- Create Script");
-		System.out.println(generateMainHiveTableCreatationScript(schema, prop));
+		
+		
+		System.out.println(generateMainHiveTableCreatationScript(schema, externalLocation, database, externalGroup, externalPermission));
 		
 		System.out.println("--- Load Script");
 		System.out.println(generateLoadDataScript(schema, prop));
     }
 
 	private static String generateMainHiveTableCreatationScript(
-			RDBSchema schema, Properties prop) {
+			RDBSchema schema, String externalLocation, String database, String externalGroup, String externalPermission) {
 		String ls = System.getProperty("line.separator");
 
-    	;
-		return "hive -e \"" + ScriptGenerator.generateHiveTable(schema, prop) + "\"" + 
-    		ls +
-    		ls +
-    		ScriptGenerator.generateChExternalDir(schema, prop);
+    	
+		return 
+				"hive -e \"create database " + database + ";\"" + 
+				ls + 
+				"hive -e \"" + ScriptGenerator.generateHiveTable(schema, externalLocation, database) + "\"" + 
+				ls +
+				ls +
+				ScriptGenerator.generateChExternalDir(schema, externalLocation, externalGroup, externalPermission);
 	}
     
+	private static String generateChangeDatabaseScript(RDBSchema schema, Properties prop) {
+		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION);
+		String databaseName = prop.getProperty(Const.USE_DATABASE, "default");
+		String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "supergroup");
+		String externalPermission = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_PERMISSIONS, "770");
+		
+		StringBuilder builder = new StringBuilder();
+		String ls = System.getProperty("line.separator");
+		
+		builder.append(ls + ls +"echo --- Stage: Drop Existing Table " + ls + ls);
+		builder.append("hive -e \"drop table " + databaseName + "." + schema.getTableName() + ";\"");
+		
+		databaseName = "$1";
+		builder.append(ls + ls +"echo --- Stage: Create new table in correct database " + ls + ls);
+		builder.append(generateMainHiveTableCreatationScript(schema, externalLocation, databaseName, externalGroup, externalPermission));
+		
+		
+		return builder.toString();
+	}
+	
+	private static String generateChangeExternalDirectoryScript(RDBSchema schema, Properties prop) {
+		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION);
+		String databaseName = prop.getProperty(Const.USE_DATABASE, "default");
+		String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "supergroup");
+		String externalPermission = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_PERMISSIONS, "770");
+		
+		StringBuilder builder = new StringBuilder();
+		String ls = System.getProperty("line.separator");
+		
+		builder.append(ls + ls +"echo --- Stage: Create New External Directory " + ls + ls);
+		builder.append("hadoop fs -mkdir $1" + ls);
+		builder.append("hadoop fs -mv " + externalLocation + "/" + schema.getTableName() + " $1/" + schema.getTableName() + ls);
+		builder.append("hive -e \"drop table " + databaseName + "." + schema.getTableName() + ";\"" + ls);
+		builder.append(generateMainHiveTableCreatationScript(schema, "$1", databaseName, externalGroup, externalPermission));
+		
+		return builder.toString();
+	}
+	
 	private static String generateBackPortScript(RDBSchema schema, Properties prop) {
 		
 		StringBuilder builder = new StringBuilder();

@@ -152,9 +152,9 @@ public class CopySortPartJob {
 
 	public static void main(String[] args) throws Exception {
 		if (args.length != 7) {
-			System.out.println("CopyConcatJob <inputPath> <outputPath> <numOfReducers> <compression> <delimiter> <sortColumns> <partitionColumn>");
+			System.out.println("CopySortPartJob <inputPath> <outputPath> <numOfReducers> <compression> <delimiter> <sortColumns> <partitionColumn>");
 			System.out.println();
-			System.out.println("Example: CopyConcatJob ./input ./output 2 snappy \\| 0,1 0");
+			System.out.println("Example: CopySortPartJob ./input ./output 2 snappy \\| 0,1 0");
 			return;
 		}
 

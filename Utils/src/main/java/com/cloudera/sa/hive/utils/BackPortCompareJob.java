@@ -50,6 +50,8 @@ public class BackPortCompareJob {
 
 		SimpleDateFormat oracleDateFormat = new SimpleDateFormat(
 				"dd/MM/yyyy HH:mm:ss");
+		SimpleDateFormat oracleMonthDateFormat = new SimpleDateFormat(
+				"dd-MMM-yyyy HH:mm:ss");
 		SimpleDateFormat teradataDateFormat = new SimpleDateFormat(
 				"yyyy-MM-dd HH:mm:ss");
 		SimpleDateFormat hiveDateFormat = new SimpleDateFormat(
@@ -58,6 +60,11 @@ public class BackPortCompareJob {
 		@Override
 		public void setup(Context context) {
 			delimiter = context.getConfiguration().get(DELIMITER_CONFIG);
+			
+			if (delimiter.equals("|")) {
+				delimiter = "\\|";
+			}
+			
 			delimiterSplit = Pattern.compile(delimiter);
 
 			String primaryKeys = context.getConfiguration().get(
@@ -98,6 +105,10 @@ public class BackPortCompareJob {
 
 			for (int i = 0; i < keyIndexes.length; i++) {
 				int index = keyIndexes[i];
+				if (cells.length <= index) {
+					context.getCounter("Mapper", "Record with out enough cells for key: isGoldSrc " + isGoldSrc).increment(1);
+					return;
+				}
 				String cell = cells[index].trim();
 
 				if (isGoldSrc) {
@@ -105,7 +116,8 @@ public class BackPortCompareJob {
 						keyBuilder.append(formatGoldKey(keyTypes[i], cell));
 					} catch (ParseException e) {
 						// TODO Auto-generated catch block
-						throw new RuntimeException(e);
+						//throw new RuntimeException(e);
+						context.getCounter("Maper", "formating gold issue").increment(1);
 					}
 				} else {
 					keyBuilder.append(cell);
@@ -123,19 +135,7 @@ public class BackPortCompareJob {
 
 			counter++;
 
-			if (counter < 5) {
-				System.out.println("c0:" + cells[0] + "-" + cells[1] + "-"
-						+ cells[2]);
-				try {
-					System.out.println("cf:"
-							+ formatGoldKey("INTEGER", cells[0]));
-				} catch (ParseException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				System.out.println("k:" + keyBuilder.toString());
-				System.out.println("v:" + goldFlag + value);
-			}
+			
 		}
 
 		public String formatGoldKey(String type, String value)
@@ -146,9 +146,15 @@ public class BackPortCompareJob {
 
 			} else if (type.equals("DATE")) {
 				if (value.contains("-")) {
-					return ""
-							+ hiveDateFormat.format(teradataDateFormat
-									.parse(value + " 00:00:00"));
+					if (value.charAt(4) > '9') {
+						return ""
+								+ hiveDateFormat.format(oracleMonthDateFormat
+										.parse(value + " 00:00:00"));	
+					} else {
+						return ""
+								+ hiveDateFormat.format(teradataDateFormat
+										.parse(value + " 00:00:00"));	
+					}
 				} else {
 					return ""
 							+ hiveDateFormat.format(oracleDateFormat
@@ -156,9 +162,15 @@ public class BackPortCompareJob {
 				}
 			} else if (type.equals("DATETIME")) {
 				if (value.contains("-")) {
-					return ""
-							+ hiveDateFormat.format(teradataDateFormat
-									.parse(value));
+					if (value.charAt(4) > '9') {
+						return ""
+								+ hiveDateFormat.format(oracleMonthDateFormat
+										.parse(value));	
+					} else {
+						return ""
+								+ hiveDateFormat.format(teradataDateFormat
+										.parse(value));	
+					}
 				} else {
 					return ""
 							+ hiveDateFormat.format(oracleDateFormat
@@ -187,10 +199,13 @@ public class BackPortCompareJob {
 			Reducer<Text, Text, LongWritable, Text> {
 		SimpleDateFormat oracleDateFormat = new SimpleDateFormat(
 				"dd/MM/yyyy HH:mm:ss");
+		SimpleDateFormat oracleMonthDateFormat = new SimpleDateFormat(
+				"dd-MMM-yyyy HH:mm:ss");
 		SimpleDateFormat teradataDateFormat = new SimpleDateFormat(
 				"yyyy-MM-dd HH:mm:ss");
 		SimpleDateFormat hiveDateFormat = new SimpleDateFormat(
 				"yyyy-MM-dd HH:mm:ss");
+
 
 		LongWritable newKey = new LongWritable(0);
 		Text newValue = new Text();
@@ -201,6 +216,11 @@ public class BackPortCompareJob {
 		@Override
 		public void setup(Context context) {
 			delimiter = context.getConfiguration().get(DELIMITER_CONFIG);
+			
+			if (delimiter.equals("|")) {
+				delimiter = "\\|";
+			}
+			
 			delimiterSplit = Pattern.compile(delimiter);
 		}
 
@@ -240,6 +260,7 @@ public class BackPortCompareJob {
 				newValue.set(key.toString() + ":G=" + goldCounter + ",B="
 						+ backPortCounter);
 				context.write(newKey, newValue);
+				context.getCounter("compare", "Unequal rows").increment(1);
 			} else {
 				// We have matching records by primary key now let us check the
 				// values.
@@ -251,7 +272,13 @@ public class BackPortCompareJob {
 							String gVal = "NA";
 							try {
 								bpVal = backPortRecord[i].trim();
-								gVal = goldRecord[i].trim();
+								if (goldRecord.length > i) {
+									gVal = goldRecord[i].trim();
+								} else {
+									context.getCounter("compare", "run over gold").increment(1);
+									gVal = "";
+								}
+									
 
 								if (bpVal.equals("\\N")) {
 									bpVal = "";
@@ -293,30 +320,47 @@ public class BackPortCompareJob {
 										context.getCounter("compare",
 												"number match").increment(1);
 									} else {
-										if (gVal.contains(":")) {
-											if (gVal.contains("-")) {
-												gVal = hiveDateFormat
-														.format(teradataDateFormat
-																.parse(gVal));
-											} else if (gVal.contains("/")) {
-												gVal = hiveDateFormat
-														.format(oracleDateFormat
-																.parse(gVal));
+										try {
+											if (gVal.contains(":")) {
+												if (gVal.contains("-")) {
+													if (gVal.charAt(4) > '9') {
+														gVal = hiveDateFormat
+																.format(oracleMonthDateFormat
+																		.parse(gVal));	
+													} else {
+														gVal = hiveDateFormat
+																.format(teradataDateFormat
+																		.parse(gVal));
+													}
+													
+												} else if (gVal.contains("/")) {
+													gVal = hiveDateFormat
+															.format(oracleDateFormat
+																	.parse(gVal));
+												}
+											} else {
+												if (gVal.contains("-")) {
+													if (gVal.charAt(4) > '9') {
+														gVal = hiveDateFormat
+																.format(oracleMonthDateFormat
+																		.parse(gVal+ " 00:00:00"));	
+													} else {
+														gVal = hiveDateFormat
+																.format(teradataDateFormat
+																		.parse(gVal+ " 00:00:00"));
+													}
+												} else if (gVal.contains("/")) {
+													gVal = hiveDateFormat
+															.format(oracleDateFormat
+																	.parse(gVal
+																			+ " 00:00:00"));
+												}
 											}
-										} else {
-											if (gVal.contains("-")) {
-												gVal = hiveDateFormat
-														.format(teradataDateFormat
-																.parse(gVal
-																		+ " 00:00:00"));
-											} else if (gVal.contains("/")) {
-												gVal = hiveDateFormat
-														.format(oracleDateFormat
-																.parse(gVal
-																		+ " 00:00:00"));
-											}
+										} catch (Exception e) {
+											//Unable to parse date.
+											context.getCounter("compare",
+													"Failed to parse date").increment(1);	
 										}
-
 									}
 									if (bpVal.equals(gVal)) {
 										context.getCounter("compare",
@@ -351,7 +395,7 @@ public class BackPortCompareJob {
 					.println("BackPortCompareJob <goldSrcInput> <backPortSrcInput> <outputPath> <# reducers> <delimier> <primaryKeys>");
 			System.out.println();
 			System.out
-					.println("Example: BackPortCompareJob ./inputGold ./inputBp ./output 2 \"|\" 1:INT,2:STRING");
+					.println("Example: BackPortCompareJob ./inputGold ./inputBp ./output 2 \\\\\\| 0:INTEGER,1:VARCHAR");
 			return;
 		}
 

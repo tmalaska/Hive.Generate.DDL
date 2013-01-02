@@ -25,6 +25,7 @@ public class Const {
 	
 	public static final String DATETIME_FORMAT = "datetime.format";
 	public static final String DATE_FORMAT = "date.format";
+	public static final String OTHER_DATE_FORMAT = "other.date.format";
 	
 	public static final String TRIM_STRING_VALUES = "trim.string.values";
 	

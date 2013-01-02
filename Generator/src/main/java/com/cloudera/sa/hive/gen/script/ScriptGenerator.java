@@ -17,15 +17,13 @@ public class ScriptGenerator {
 	public static String lineSeparator = System.getProperty("line.separator");
 	
 	
-	public static String generateChExternalDir(RDBSchema schema, Properties prop) {
+	public static String generateChExternalDir(RDBSchema schema, String externalLoc, String externalGroup, String externalPermission) {
 		
 		String ls = System.getProperty("line.separator");
 		
-		String externalLoc = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
 		if ( externalLoc.isEmpty() == false) {
 			
-			String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "");
-			String externalPermission = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_PERMISSIONS, "");
+			
 			
 			StringBuilder builder = new StringBuilder();
 			if (externalGroup.isEmpty() == false) {
@@ -40,9 +38,8 @@ public class ScriptGenerator {
 		}
 	}
 	
-	public static String generateHiveTable(RDBSchema schema, Properties prop) {
+	public static String generateHiveTable(RDBSchema schema, String externalLocation, String database) {
 		List<Column> columns = schema.getColumns();
-		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION);
 		
 		StringBuilder builder = new StringBuilder();
 		
@@ -52,7 +49,7 @@ public class ScriptGenerator {
 			builder.append("EXTERNAL ");
 		}
 		
-		builder.append("TABLE " + schema.getTableName() + lineSeparator);
+		builder.append("TABLE " + database + "." + schema.getTableName() + lineSeparator);
 		builder.append("( " );
 		
 		boolean isFirstColumn = true;
@@ -101,14 +98,14 @@ public class ScriptGenerator {
 	}
 	
 	public static String generateTempHiveTable(RDBSchema schema, Properties prop) {
-		return generateBasicStringHiveTable(schema, prop, Const.TEMP_POSTFIX);
+		return generateBasicStringHiveTable(schema, prop, Const.TEMP_POSTFIX, prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT), prop.getProperty(Const.TEMP_TABLE_STORED_AS));
 	}
 	
 	public static String generateBackPortHiveTable(RDBSchema schema, Properties prop) {
-		return generateBasicStringHiveTable(schema, prop, Const.BACKPORT_POSTFIX);
+		return generateBasicStringHiveTable(schema, prop, Const.BACKPORT_POSTFIX, prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT), "STORED AS TEXTFILE");
 	}
 	
-	public static String generateBasicStringHiveTable(RDBSchema schema, Properties prop, String postFix) {
+	public static String generateBasicStringHiveTable(RDBSchema schema, Properties prop, String postFix, String rowFormat, String storedAs) {
 		
 		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
 		String addJars = prop.getProperty(Const.TEMP_TABLE_ADD_JARS, "");
@@ -145,10 +142,9 @@ public class ScriptGenerator {
 		
 		builder.append(")" + lineSeparator);
 		
-		builder.append(prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT) + lineSeparator);
+		builder.append(rowFormat + lineSeparator);
 		
-		
-		builder.append(prop.getProperty(Const.TEMP_TABLE_STORED_AS));
+		builder.append(storedAs);
 		
 		if (externalLocation.isEmpty() == false) {
 			builder.append(" LOCATION \\\"" + externalLocation + "/" + schema.getTableName() + postFix + "\\\"" + lineSeparator);
@@ -226,6 +222,7 @@ public class ScriptGenerator {
 	public static String generateInsertInto(RDBSchema schema, Properties prop) {
 		
 		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "dd/MM/yyyy");
+		String otherDateFormat = prop.getProperty(Const.OTHER_DATE_FORMAT, "dd/MM/yy");
 		String datetimeFormat = prop.getProperty(Const.DATETIME_FORMAT, "dd/MM/yyyy HH:mm:ss");
 		boolean applyTeradataFormatting = prop.getProperty(Const.APPLY_TERADATA_FORMATTING, "false").equals("true");
 		
@@ -272,7 +269,7 @@ public class ScriptGenerator {
 				builder.append("    ");
 				
 				String type = c.getType().toUpperCase();
-				if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("VARCHAR")) {
+				if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("VARCHAR") || type.equals("CLOB")) {
 					if (doTrimOnString || applyTeradataFormatting) { builder.append("trim("); }
 					
 					builder.append("a." + c.getName());
@@ -284,6 +281,12 @@ public class ScriptGenerator {
 						fieldName = "trim(" + fieldName + ")";
 					}
 					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + dateFormat + "'))");
+				}else if (type.equals("OTHERDATE")) {
+					String fieldName = "a." + c.getName();
+					if (applyTeradataFormatting) {
+						fieldName = "trim(" + fieldName + ")";
+					}
+					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + otherDateFormat + "'))");
 				} else if (type.equals("DATETIME") || type.equals("TIMESTAMP")) {
 					String fieldName = "a." + c.getName();
 					if (applyTeradataFormatting) {
@@ -291,7 +294,7 @@ public class ScriptGenerator {
 					}
 					
 					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + datetimeFormat + "'))");
-				} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT")) {
+				} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT") || type.equals("FLOAT")) {
 					String fieldName = "a." + c.getName();
 					if (c.getPercision() == 0) {
 						
@@ -352,9 +355,9 @@ public class ScriptGenerator {
 		String dbType = column.getType().toUpperCase();
 		
 		
-		if (dbType.equals("VARCHAR2") || dbType.equals("CHAR")|| dbType.equals("VARCHAR")) {
+		if (dbType.equals("VARCHAR2") || dbType.equals("CHAR")|| dbType.equals("VARCHAR") || dbType.equals("CLOB")) {
 			return "STRING";
-		} else if (dbType.equals("NUMBER") || dbType.equals("DECIMAL") || dbType.equals("BYTEINT")  || dbType.equals("SMALLINT") || dbType.equals("INTEGER")|| dbType.equals("BIGINT")) {
+		} else if (dbType.equals("NUMBER") || dbType.equals("DECIMAL") || dbType.equals("BYTEINT")  || dbType.equals("SMALLINT") || dbType.equals("INTEGER")|| dbType.equals("BIGINT") || dbType.equals("FLOAT")) {
 			if (column.getPercision() == 0) {
 				if (column.getLength() > 18) {
 					return "STRING";
@@ -375,7 +378,7 @@ public class ScriptGenerator {
 				}
 			}
 			
-		} else if (dbType.equals("DATE") || dbType.equals("DATETIME") || dbType.equals("TIMESTAMP")) {
+		} else if (dbType.equals("OTHERDATE") || dbType.equals("DATE") || dbType.equals("DATETIME") || dbType.equals("TIMESTAMP")) {
 			return "TIMESTAMP";
 		} else {
 			throw new RuntimeException("Currently doesn't support " + dbType);
@@ -402,8 +405,10 @@ public class ScriptGenerator {
 	public static String generateTestData(RDBSchema schema, Properties prop, int startingLine, int linesOfData, char strChar) {
 		
 		String dateFormat = prop.getProperty(Const.DATE_FORMAT, "dd/MM/yyyy");
+		String otherDateFormat = prop.getProperty(Const.OTHER_DATE_FORMAT, "dd/MM/yy");
 		String datetimeFormat = prop.getProperty(Const.DATETIME_FORMAT, "dd/MM/yyyy HH:mm:ss");
 		SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+		SimpleDateFormat simpleOtherDateFormat = new SimpleDateFormat(otherDateFormat);
 		SimpleDateFormat simpleDateTimeFormat = new SimpleDateFormat(datetimeFormat);
 		
 		List<Column> columns = schema.getColumns();
@@ -433,13 +438,13 @@ public class ScriptGenerator {
 					builder.append("|");
 				}
 				String type = c.getType().toUpperCase();
-				if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("CLOB")|| type.equals("VARCHAR")) {
+				if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("CLOB")|| type.equals("VARCHAR") || type.equals("CLOB")) {
 					
 					for (int j = 0; j < c.getLength(); j++) {
 						
 						builder.append(strChar);
 					}
-				} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT")) {
+				} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT") || type.equals("FLOAT")) {
 					StringBuilder numBuilder = new StringBuilder();
 					for (int j = 0; j < c.getLength(); j++) {
 						//add possible percision
@@ -460,6 +465,10 @@ public class ScriptGenerator {
 					
 					Date newDate = new Date();
 					builder.append(simpleDateFormat.format(newDate));
+				} else if (type.equals("OTHERDATE")) {
+					
+					Date newDate = new Date();
+					builder.append(simpleOtherDateFormat.format(newDate));
 				} else if (type.equals("DATETIME") || type.equals("DATETIME")) {
 					
 					Date newDate = new Date();
