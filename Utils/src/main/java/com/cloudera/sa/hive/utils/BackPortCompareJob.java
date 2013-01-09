@@ -56,6 +56,8 @@ public class BackPortCompareJob {
 				"yyyy-MM-dd HH:mm:ss");
 		SimpleDateFormat hiveDateFormat = new SimpleDateFormat(
 				"yyyy-MM-dd HH:mm:ss");
+		SimpleDateFormat sasDateShort = new SimpleDateFormat("MM/dd/yy");
+		SimpleDateFormat sasDateTime = new SimpleDateFormat("ddMMMyyyy:HH:mm:ss");
 
 		@Override
 		public void setup(Context context) {
@@ -140,8 +142,15 @@ public class BackPortCompareJob {
 
 		public String formatGoldKey(String type, String value)
 				throws ParseException {
+			
+			type = type.toUpperCase();
+			
+			if (value.equals("\\N")) {
+				value = "";
+			}
+			
 			if (type.equals("VARCHAR2") || type.equals("CHAR")
-					|| type.equals("VARCHAR")) {
+					|| type.equals("VARCHAR") || type.equals("STRING")) {
 				return value.trim();
 
 			} else if (type.equals("DATE")) {
@@ -155,10 +164,16 @@ public class BackPortCompareJob {
 								+ hiveDateFormat.format(teradataDateFormat
 										.parse(value + " 00:00:00"));	
 					}
-				} else {
-					return ""
-							+ hiveDateFormat.format(oracleDateFormat
-									.parse(value + " 00:00:00"));
+				} else if (value.contains("/")){
+					if (value.length() == 8) {
+						return ""
+								+ hiveDateFormat.format(sasDateShort
+										.parse(value));
+					} else {
+						return ""
+								+ hiveDateFormat.format(oracleDateFormat
+										.parse(value + " 00:00:00"));	
+					}
 				}
 			} else if (type.equals("DATETIME")) {
 				if (value.contains("-")) {
@@ -171,19 +186,24 @@ public class BackPortCompareJob {
 								+ hiveDateFormat.format(teradataDateFormat
 										.parse(value));	
 					}
-				} else {
+				} else if (value.contains("/")){
 					return ""
 							+ hiveDateFormat.format(oracleDateFormat
 									.parse(value));
+				} else {
+					return ""
+							+ hiveDateFormat.format(sasDateTime
+									.parse(value));
+					
 				}
-			} else if (type.equals("NUMBER")) {
+			} else if (type.equals("NUMBER") || type.equals("NUM")) {
 				return value;
-			} else if (type.equals("DECIMAL")) {
+			} else if (type.equals("DECIMAL") || type.equals("DOUBLE") || type.equals("FLOAT")) {
 				if (value.endsWith(".")) {
 					return value + "0";
 				}
 			} else if (type.equals("BYTEINT") || type.equals("SMALLINT")
-					|| type.equals("INTEGER") || type.equals("BIGINT")) {
+					|| type.equals("INTEGER") || type.equals("BIGINT") || type.equals("LONG")) {
 				int index = value.indexOf(".");
 				if (index > -1) {
 					return value.substring(0, index);
@@ -205,6 +225,10 @@ public class BackPortCompareJob {
 				"yyyy-MM-dd HH:mm:ss");
 		SimpleDateFormat hiveDateFormat = new SimpleDateFormat(
 				"yyyy-MM-dd HH:mm:ss");
+		
+
+		SimpleDateFormat sasDateShort = new SimpleDateFormat("MM/dd/yy");
+		SimpleDateFormat sasDateTime = new SimpleDateFormat("ddMMMyyyy:HH:mm:ss");
 
 
 		LongWritable newKey = new LongWritable(0);
@@ -337,6 +361,11 @@ public class BackPortCompareJob {
 													gVal = hiveDateFormat
 															.format(oracleDateFormat
 																	.parse(gVal));
+												} else {
+													gVal = hiveDateFormat
+															.format(sasDateTime
+																	.parse(gVal));
+													
 												}
 											} else {
 												if (gVal.contains("-")) {
@@ -350,10 +379,13 @@ public class BackPortCompareJob {
 																		.parse(gVal+ " 00:00:00"));
 													}
 												} else if (gVal.contains("/")) {
-													gVal = hiveDateFormat
-															.format(oracleDateFormat
-																	.parse(gVal
-																			+ " 00:00:00"));
+													if (gVal.length() == 8) {
+														gVal = hiveDateFormat.format(sasDateShort
+																		.parse(gVal));
+													} else {
+														gVal = hiveDateFormat.format(oracleDateFormat
+																		.parse(gVal + " 00:00:00"));	
+													}
 												}
 											}
 										} catch (Exception e) {

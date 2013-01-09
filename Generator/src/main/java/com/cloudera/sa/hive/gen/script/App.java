@@ -68,7 +68,7 @@ public class App
             	
             	int length = 0;
             	if (nextLine[4].isEmpty() == false) {
-            		length = Integer.parseInt(nextLine[4]);
+            		length = Integer.parseInt(nextLine[4].trim());
             	}
             	
             	int percistion = 0;
@@ -245,7 +245,7 @@ public class App
     		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.Hive8InsertIntoSimulator prep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
     		
     	} else if (insertInfoLogic.equals(Const.INSERT_INTO_LOGIC_DELTA)) {
-    		builder.append("hadoop jar hive.gen.script.jar com.cloudera.sa.hive.gen.script.PartitionStager ePrep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.PartitionStager ePrep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
     		
     	}  
     	
@@ -255,9 +255,9 @@ public class App
     	builder.append(ls + ls +"echo --- Stage: Additional Prep and Staging " + ls + ls);
     	
     	if (insertInfoLogic.equals(Const.INSERT_INTO_LOGIC_HIVE8_SIM)) {
-    		builder.append("hadoop jar hive.loader.utils.jar Hive8InsertIntoSimulator.Hive8InsertIntoSimulator reinsert " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.Hive8InsertIntoSimulator reinsert " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
     	} else if (insertInfoLogic.equals(Const.INSERT_INTO_LOGIC_DELTA)) {
-    		builder.append("hadoop jar hive.gen.script.jar com.cloudera.sa.hive.gen.script.PartitionStager dPrep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.PartitionStager dPrep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
     		builder.append(ls + ls);
     		
     		//<existing Input Path> <delta Input Path> <primaryKeyList> <outputPath> <# reducers>

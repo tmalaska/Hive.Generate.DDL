@@ -177,12 +177,12 @@ public class ScriptGenerator {
 		if (deleteTempFolder.equals("true") && rootExternalLocation.isEmpty() == false) {
 			
 			if (insertIntoMode.equals(Const.INSERT_INTO_LOGIC_HIVE8_SIM)) {
-				builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.EXISTING_TEMP_POST_DIR_NAME + newLine);
+				builder.append(newLine + "hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.EXISTING_TEMP_POST_DIR_NAME + newLine);
 			} else if (insertIntoMode.equals(Const.INSERT_INTO_LOGIC_DELTA)) {
-				builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.EXISTING_TEMP_POST_DIR_NAME + newLine);
-				builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.DELTA_TEMP_POST_DIR_NAME + newLine);
+				builder.append(newLine + "hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.EXISTING_TEMP_POST_DIR_NAME + newLine);
+				builder.append(newLine + "hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.DELTA_TEMP_POST_DIR_NAME + newLine);
 			}
-			builder.append("hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.TEMP_POSTFIX + newLine);
+			builder.append(newLine + "hadoop fs -rm -r -skipTrash " + rootExternalLocation + "/" + schema.getTableName() + Const.TEMP_POSTFIX + newLine);
 		}
 		return builder.toString();
 	}
@@ -229,11 +229,14 @@ public class ScriptGenerator {
 		boolean doTrimOnString = prop.getProperty(Const.TRIM_STRING_VALUES, "false").equals("true");
 		String compressionCodec = prop.getProperty(Const.COMPRESSION_CODEC, "org.apache.hadoop.io.compress.SnappyCodec");
 		
+		String blockSize = prop.getProperty(Const.FS_LOCAL_BLOCK_SIZE, "67108864");
+		
 		StringBuilder builder = new StringBuilder();
 		
 		builder.append("SET hive.exec.compress.output=true;" + lineSeparator); 
 		builder.append("SET io.seqfile.compression.type=BLOCK;" + lineSeparator);
 		builder.append("SET mapred.output.compression.codec = " + compressionCodec + ";" + lineSeparator);
+		builder.append("SET fs.local.block.size = " + blockSize + ";" + lineSeparator);
 		builder.append("SET hive.io.rcfile.record.buffer.size = " + Math.max((4 * 1024 * 1024), ((schema.getColumns().size() / 3) * 1024 * 1024)) + ";"  + lineSeparator);
 		builder.append(lineSeparator);
 		

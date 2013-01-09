@@ -89,6 +89,8 @@ public class Hive8InsertIntoSimulator {
 			}
 			
 			hdfs.delete(tempRootFolder, true);
+		} else {
+			System.out.println("Unknow Stage: Doing Nothing");
 		}
 		
 		hdfs.close();

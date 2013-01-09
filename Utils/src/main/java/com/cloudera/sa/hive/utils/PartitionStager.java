@@ -1,4 +1,4 @@
-package com.cloudera.sa.hive.gen.script;
+package com.cloudera.sa.hive.utils;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -8,9 +8,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+
 public class PartitionStager {
 
-
+	public static final String EXISTING_TEMP_POST_DIR_NAME = "_EXISTING_TEMP";
+	public static final String DELTA_TEMP_POST_DIR_NAME = "_DELTA_TEMP";
+	
 	
 	
 	/**
@@ -36,17 +39,17 @@ public class PartitionStager {
 		
 		System.out.println("----------------------------- Starting " + stage);
 		if (stage.equals("ePrep")) {
-			Path tempRootFolder = new Path(rootPath + "/" + tableName + Const.EXISTING_TEMP_POST_DIR_NAME);
+			Path tempRootFolder = new Path(rootPath + "/" + tableName + EXISTING_TEMP_POST_DIR_NAME);
 			moveTableDir(hdfs, rootFolder, tempRootFolder, true);
 		}else if (stage.equals("dPrep")) {
-			Path tempRootFolder = new Path(rootPath + "/" + tableName + Const.DELTA_TEMP_POST_DIR_NAME);
+			Path tempRootFolder = new Path(rootPath + "/" + tableName + DELTA_TEMP_POST_DIR_NAME);
 			moveTableDir(hdfs, rootFolder, tempRootFolder, false);
 		}else if (stage.equals("cleanup")){
-			Path tempRootFolder = new Path(rootPath + "/" + tableName + Const.EXISTING_TEMP_POST_DIR_NAME);
+			Path tempRootFolder = new Path(rootPath + "/" + tableName + EXISTING_TEMP_POST_DIR_NAME);
 			System.out.println("Deleting " + tempRootFolder);
 			hdfs.delete(tempRootFolder, true);
 			
-			tempRootFolder = new Path(rootPath + "/" + tableName + Const.DELTA_TEMP_POST_DIR_NAME);
+			tempRootFolder = new Path(rootPath + "/" + tableName + DELTA_TEMP_POST_DIR_NAME);
 			System.out.println("Deleting " + tempRootFolder);
 			hdfs.delete(tempRootFolder, true);
 		}

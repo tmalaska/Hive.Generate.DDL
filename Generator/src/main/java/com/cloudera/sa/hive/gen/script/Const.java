@@ -41,5 +41,7 @@ public class Const {
 	
 	public static final String CHECK_FOR_HEADER_RECORDS = "check.for.header.records";
 	
+	public static final String FS_LOCAL_BLOCK_SIZE = "fs.local.block.size";
+	
 	public static final String USE_DATABASE = "use.database";
 }
