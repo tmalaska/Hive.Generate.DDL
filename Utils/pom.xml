@@ -28,6 +28,15 @@
       <scope>compile</scope>
     </dependency>
 
+
+	<dependency>
+		<groupId>org.apache.hive</groupId>
+		<artifactId>hive-exec</artifactId>
+		<!--  <version>0.8.1</version>-->
+		<version>0.9.0-cdh4.1.2</version>
+	</dependency>
+	
+
   </dependencies>
 
   <repositories>
