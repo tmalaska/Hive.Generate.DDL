@@ -122,9 +122,12 @@ public class App
     	writerChDb.close();
     	
     	FileWriter writerChED = new FileWriter(new File(directory + "/" + schema.getTableName() + "_ChangeExternalDirectory.sh"));
-    	writerChED.write(generateChangeExternalDirectoryScript(schema, prop));
+    	writerChED.write(generateChangeExternalDirectoryScript(schema, prop, false));
     	writerChED.close();
     	
+    	FileWriter writerTmpChED = new FileWriter(new File(directory + "/" + schema.getTableName() + "_Temp_ChangeExternalDirectory.sh"));
+    	writerTmpChED.write(generateChangeExternalDirectoryScript(schema, prop, true));
+    	writerTmpChED.close();
     	
     	ScriptGenerator.lineSeparator = System.getProperty("line.separator");
     	FileWriter writerD = new FileWriter(new File(directory + "/" + schema.getTableName() + "_SampleData.Init.txt"));
@@ -191,31 +194,45 @@ public class App
 		return builder.toString();
 	}
 	
-	private static String generateChangeExternalDirectoryScript(RDBSchema schema, Properties prop) {
+	private static String generateChangeExternalDirectoryScript(RDBSchema schema, Properties prop, boolean isTempTable) {
 		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION);
 		String databaseName = prop.getProperty(Const.USE_DATABASE, "default");
 		String externalGroup = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_GROUP, "supergroup");
 		String externalPermission = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_PERMISSIONS, "770");
+		String tableName = isTempTable?schema.getTableName() + Const.TEMP_POSTFIX:schema.getTableName();
+		
 		
 		StringBuilder builder = new StringBuilder();
 		String ls = System.getProperty("line.separator");
 		
 		builder.append(ls + ls +"echo --- Stage: Create New External Directory " + ls + ls);
 		builder.append("hadoop fs -mkdir $1" + ls);
-		builder.append("hadoop fs -mv " + externalLocation + "/" + schema.getTableName() + " $1/" + schema.getTableName() + ls);
-		builder.append("hive -e \"drop table " + databaseName + "." + schema.getTableName() + ";\"" + ls);
-		builder.append(generateMainHiveTableCreatationScript(schema, "$1", databaseName, externalGroup, externalPermission));
+		builder.append("hadoop fs -mv " + externalLocation + "/" + tableName + " $1/" + tableName + ls);
+		builder.append("hive -e \"drop table " + databaseName + "." + tableName + ";\"" + ls);
+		if (isTempTable) {
+			String tempTableStoredAs = prop.getProperty(Const.TEMP_TABLE_STORED_AS);
+			String rowFormat = prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT);
+			String addJars = prop.getProperty(Const.TEMP_TABLE_ADD_JARS, "");
+	    	builder.append("hive -e \"" + ScriptGenerator.generateTempHiveTable(schema, "$1", addJars, rowFormat, tempTableStoredAs) + "\"");
+		} else {
+			builder.append(generateMainHiveTableCreatationScript(schema, "$1", databaseName, externalGroup, externalPermission));	
+		}
+		
 		
 		return builder.toString();
 	}
 	
 	private static String generateBackPortScript(RDBSchema schema, Properties prop) {
 		
+		String rowFormat = prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT);
+		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
+		String addJars = prop.getProperty(Const.TEMP_TABLE_ADD_JARS, "");
+		
 		StringBuilder builder = new StringBuilder();
 		String ls = System.getProperty("line.separator");
     	
     	builder.append(ls + ls +"echo --- Stage: Create Temp Table " + ls + ls);
-    	builder.append("hive -e \"" + ScriptGenerator.generateBackPortHiveTable(schema, prop) + "\"");
+    	builder.append("hive -e \"" + ScriptGenerator.generateBackPortHiveTable(schema, externalLocation, addJars, rowFormat) + "\"");
     	builder.append(ls + ls + "echo --- Stage: Insert into Hive Table " + ls + ls);
     	builder.append("hive -e \"" + ScriptGenerator.generateBackPort(schema, prop) + "\"");
     	
@@ -228,12 +245,17 @@ public class App
     	String deleteTempTableData = prop.getProperty(Const.DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
     	boolean skipCopyStep = prop.getProperty(Const.SKIP_COPY_STEP, "false").equals("true");
     	boolean dropTempTableAfterLoad = prop.getProperty(Const.DROP_TEMP_TABLE_AFTER_LOAD, "true").equals("true");
+		String tempTableStoredAs = prop.getProperty(Const.TEMP_TABLE_STORED_AS);
+		String rowFormat = prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT);
+		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
+		String addJars = prop.getProperty(Const.TEMP_TABLE_ADD_JARS, "");
+    	
     	
 		StringBuilder builder = new StringBuilder();
 		String ls = System.getProperty("line.separator");
     	
     	builder.append(ls + ls +"echo --- Stage: Create Temp Table " + ls + ls);
-    	builder.append("hive -e \"" + ScriptGenerator.generateTempHiveTable(schema, prop) + "\"");
+    	builder.append("hive -e \"" + ScriptGenerator.generateTempHiveTable(schema, externalLocation, addJars, rowFormat, tempTableStoredAs) + "\"");
     	
     	if (skipCopyStep == false) {
 	    	builder.append(ls + ls +"echo --- Stage: Loading data into Temp Table "  + ls);
@@ -268,13 +290,17 @@ public class App
     		String maxColumns = "" + schema.getColumns().size();
     		String outputPath = tablePath;
     		String numOfReducers = prop.getProperty(Const.COMPACTOR_NUM_OF_REDUCER, "1");
-    		builder.append("hadoop jar hive.gen.script.jar com.cloudera.sa.hive.gen.script.PartitionCompactor " + 
+    		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.PartitionCompactor " + 
     				existingInputPath + " " +
     				deltaInputPath + " " +
     				primaryKeyList + " " +
     				maxColumns + " " + 
     				outputPath + " " + 
     				numOfReducers);
+    		
+    		builder.append(ls + ls);
+    		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.PartitionStager cleanup " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		builder.append(ls + ls);
     	}  
     	
     	if (dropTempTableAfterLoad) {
@@ -306,7 +332,7 @@ public class App
 		}
 		
 		if (primaryKeys == 0) {
-			builder.append(0);
+			builder.append("0");
 		}
 		return builder.toString();
 	}

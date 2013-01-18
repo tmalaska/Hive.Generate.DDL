@@ -1,4 +1,4 @@
-package com.cloudera.sa.hive.gen.script;
+package com.cloudera.sa.hive.utils;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -11,7 +11,7 @@ import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
 import org.apache.hadoop.hive.ql.io.RCFileOutputFormat;
 import org.apache.hadoop.hive.serde2.columnar.BytesRefArrayWritable;
 import org.apache.hadoop.hive.serde2.columnar.BytesRefWritable;
-import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.BytesWritable; 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;

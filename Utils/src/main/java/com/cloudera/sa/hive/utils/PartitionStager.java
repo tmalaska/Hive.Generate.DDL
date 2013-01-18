@@ -62,8 +62,30 @@ public class PartitionStager {
 	private static void moveTableDir(FileSystem hdfs, Path rootFolder,
 			Path tempRootFolder, boolean remakeTableDirector) throws IOException, FileNotFoundException {
 		System.out.println();
-		System.out.println("Moving " + rootFolder + " to " + tempRootFolder);
-		hdfs.rename(rootFolder, tempRootFolder);
+		if (hdfs.exists(tempRootFolder)) {
+			System.out.println("Moving files from " + rootFolder + " to " + tempRootFolder);
+			FileStatus[] rootFolderFiles = hdfs.listStatus(rootFolder);
+			for (FileStatus fs: rootFolderFiles) {
+				String filename = fs.getPath().getName();
+				if (filename.startsWith("_") == false) {
+					
+					Path newFilePath = new Path(tempRootFolder + "/" + filename);
+					
+					while (hdfs.exists(newFilePath)) {
+						newFilePath = new Path (newFilePath + "_x");
+					}
+					
+					System.out.println(" - Moving file " + fs.getPath() + " to " + newFilePath);
+				
+					hdfs.rename(fs.getPath(), newFilePath);
+				}
+			}
+			
+		} else {
+			System.out.println("Moving " + rootFolder + " to " + tempRootFolder);
+			hdfs.rename(rootFolder, tempRootFolder);	
+		}
+		
 		System.out.println("Making " + rootFolder);
 		
 		System.out.println(hdfs.listStatus(tempRootFolder).length + " files is " + tempRootFolder);

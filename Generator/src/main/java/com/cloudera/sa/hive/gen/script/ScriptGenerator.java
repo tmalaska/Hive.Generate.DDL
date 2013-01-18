@@ -1,5 +1,6 @@
 package com.cloudera.sa.hive.gen.script;
 
+import java.math.BigInteger;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -97,18 +98,16 @@ public class ScriptGenerator {
 		return builder.toString();
 	}
 	
-	public static String generateTempHiveTable(RDBSchema schema, Properties prop) {
-		return generateBasicStringHiveTable(schema, prop, Const.TEMP_POSTFIX, prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT), prop.getProperty(Const.TEMP_TABLE_STORED_AS));
+	public static String generateTempHiveTable(RDBSchema schema, String externalLocation, String addJors, String rowFormat, String tempTableStoredAs) {
+		return generateBasicStringHiveTable(schema, externalLocation, addJors, Const.TEMP_POSTFIX, rowFormat, tempTableStoredAs);
 	}
 	
-	public static String generateBackPortHiveTable(RDBSchema schema, Properties prop) {
-		return generateBasicStringHiveTable(schema, prop, Const.BACKPORT_POSTFIX, prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT), "STORED AS TEXTFILE");
+	public static String generateBackPortHiveTable(RDBSchema schema, String externalLocation, String addJars, String rowFormat) {
+		return generateBasicStringHiveTable(schema, externalLocation, addJars, Const.BACKPORT_POSTFIX, rowFormat, "STORED AS TEXTFILE");
 	}
 	
-	public static String generateBasicStringHiveTable(RDBSchema schema, Properties prop, String postFix, String rowFormat, String storedAs) {
-		
-		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
-		String addJars = prop.getProperty(Const.TEMP_TABLE_ADD_JARS, "");
+	public static String generateBasicStringHiveTable(RDBSchema schema, String externalLocation, String addJars, String postFix, String rowFormat, String storedAs) {
+
 		
 		List<Column> columns = schema.getColumns();
 		
@@ -398,10 +397,10 @@ public class ScriptGenerator {
 					"for f in $FILES " + newLine + 
 					"do " + newLine + 
 					"  echo \"Loading $f file...\" " + newLine + 
-					"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + 
+					"  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" OVERWRITE INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + 
 					"done " + newLine + newLine;
 		} else {
-			return "hive -e \"LOAD DATA INPATH \\\"$1\\\" INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + newLine;
+			return "hive -e \"LOAD DATA INPATH \\\"$1\\\" OVERWRITE INTO TABLE " + schema.getTableName() + Const.TEMP_POSTFIX + ";\"" + newLine + newLine;
 		}
 	}
 	
@@ -460,9 +459,15 @@ public class ScriptGenerator {
 						if (j == 0) { numBuilder.append("1"); }
 						else { numBuilder.append("0"); }
 					}
-					//BigInteger bi = new BigInteger(numBuilder.toString());
-					//bi = bi.add(new BigInteger("" + i));
-					builder.append(numBuilder);
+					if (c.getPercision() == 0) {
+						BigInteger bi = new BigInteger(numBuilder.toString());
+						bi = bi.add(new BigInteger("" + i));
+							
+						builder.append(bi);	
+					} else {
+						builder.append(numBuilder);
+					}
+					
 					
 				} else if (type.equals("DATE")) {
 					
