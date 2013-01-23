@@ -21,6 +21,18 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
+/**
+ * This is a very common simple map/reduce job.  It will take any delimitered text file
+ * and copy it.  
+ * <br><br>
+ * It will sort and partition by what every columns you tell it too.
+ * <br><br>
+ * It also give the called the options of coping to a uncompressed text file or a snappy or gzip sequence file.
+ * 
+ * 
+ * @author ted.malaska
+ *
+ */
 public class CopySortPartJob {
 
 	public static final String DELIMITER_CONF = "copy.job.delimiter";

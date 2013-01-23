@@ -14,8 +14,6 @@ public class PartitionStager {
 	public static final String EXISTING_TEMP_POST_DIR_NAME = "_EXISTING_TEMP";
 	public static final String DELTA_TEMP_POST_DIR_NAME = "_DELTA_TEMP";
 	
-	
-	
 	/**
 	 * 
 	 * 

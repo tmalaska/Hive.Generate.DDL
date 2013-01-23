@@ -13,6 +13,16 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
+/**
+ * This is a very handle map/reduce job for validating delimiter files.  
+ * <br><br>
+ * It will read through the file and report how many rows have how many delimiters.
+ * <br><br>
+ * It will also write out a sampling of rows that do not match the desired delimiter count.
+ * 
+ * @author ted.malaska
+ *
+ */
 public class DelimiterIssueFinderJob {
 
 

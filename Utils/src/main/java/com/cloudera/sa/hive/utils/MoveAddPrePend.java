@@ -5,6 +5,16 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+/**
+ * This is a simple job that mv files into a given folder.  While moving this job will 
+ * prepend a string to the front of the file name.  
+ * <br><br>
+ * This comes in handle when trying to combine files from two different map/reduce jobs.
+ * Given that map/reduce job produce files when names that would conflict if added to the same folder
+ * 
+ * @author ted.malaska
+ *
+ */
 public class MoveAddPrePend {
 
 	/**

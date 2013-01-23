@@ -32,6 +32,14 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.SnappyCodec;
 
+/**
+ * This is a job that runs on a clint.  If will take non-splitable gzip or zip files in HDFS
+ * and uncompress them to write them back out to HDFS.
+ * <br><br>
+ * Note: this is not a map/reduce job.  So it is limited to the network and processing power on one box.
+ * @author ted.malaska
+ *
+ */
 public class UnCompressor {
 
 	public static int finishedThreaded = 0;

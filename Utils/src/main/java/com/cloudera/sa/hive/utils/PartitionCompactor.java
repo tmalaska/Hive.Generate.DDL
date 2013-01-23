@@ -1,10 +1,13 @@
 package com.cloudera.sa.hive.utils;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.io.RCFile;
 import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
@@ -23,6 +26,26 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.Mapper;
 
+
+/**
+ * This map/reduce job is designed to merge an existing hive tables data with new data.  
+ * Joining on the primary key or keys.  If more then one row joins to a primary key or keys.
+ * Then the new row will be keeped and the older row will be removed.  The results
+ * of this will be a delta table.  Allowing delta to exist in a Hive table even through 
+ * the unlining file system doesn't support deltas.
+ * <br><br>
+ * This map/reduce job will handle partitioned and non-partitioned tables. and has
+ * been tested on Hive 8 and 9
+ * <br><br>
+ * In the case of partitioned tables.  Only the partitions that existing in the existing 
+ * data and the new data will go through the map/reduce process.  If the partition only
+ * exist in the new of existing data.  Then the data is simply copied to the final table
+ * with a move.  This will allow very large tables to be merge quickly if they are partitioned
+ * correctly.
+ * 
+ * @author ted.malaska
+ *
+ */
 public class PartitionCompactor {
 
 	public static final String EXISTING_FILE_PATH_CONF = "custom.existing.file.path";
@@ -164,6 +187,80 @@ public class PartitionCompactor {
 		String outputPath = args[4];
 		String numberOfReducers = args[5];
 
+		if (isPartitioned(existingInputPath, deltaInputPath)) {
+			compactAllPartitions(existingInputPath, deltaInputPath,
+					primaryKeyList, maxColumns, outputPath, numberOfReducers);
+		} else {
+			compactASinglePartition(existingInputPath, deltaInputPath,
+					primaryKeyList, maxColumns, outputPath, numberOfReducers);	
+		}
+		
+	}
+
+	private static boolean isPartitioned(String existingInputPath, String deltaInputPath) throws IOException {
+		Configuration config = new Configuration();
+		FileSystem hdfs = FileSystem.get(config);
+		FileStatus[] folders = hdfs.listStatus(new Path(deltaInputPath));
+		
+		if (folders.length > 0 || folders[0].isDirectory()) {
+			return true;
+		}
+
+		folders = hdfs.listStatus(new Path(existingInputPath));
+		if (folders.length > 0 || folders[0].isDirectory()) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	private static void compactAllPartitions(String existingInputPath, 
+			String deltaInputPath, String primaryKeyList, String maxColumns,
+			String outputPath, String numberOfReducers) throws IOException {
+		
+		HashSet<String> deltaFolders = new HashSet<String>();
+		
+		Configuration config = new Configuration();
+		FileSystem hdfs = FileSystem.get(config);
+		FileStatus[] deltaFolderStatusArray = hdfs.listStatus(new Path(deltaInputPath));
+		
+		for (FileStatus fs: deltaFolderStatusArray) {
+			deltaFolders.add(fs.getPath().getName());
+		}
+		
+		FileStatus[] existingFolderStatusArray = hdfs.listStatus(new Path(existingInputPath));
+		for (FileStatus fs: existingFolderStatusArray) {
+			if (deltaFolders.contains(fs.getPath().getName())){
+				//We have a partition that exist is both the existing data and the delta data
+				//So we have to run a compaction mr job.
+				System.out.println("Running Compaction for partition:" + fs.getPath().getName());
+				compactASinglePartition(existingInputPath + "/" + fs.getPath().getName(), 
+						deltaInputPath + "/"  + fs.getPath().getName(),
+						primaryKeyList, maxColumns, outputPath + "/"  + fs.getPath().getName(), numberOfReducers);
+				//Remove the folder from the delta hashSet so we 
+				deltaFolders.remove(fs.getPath().getName());
+			} else {
+				//We have a partition that exist is the existing data but not in the delta data.
+				System.out.println("Moving Existing Partition Back into table:" + fs.getPath().getName());
+				hdfs.rename(new Path(existingInputPath + "/" + fs.getPath().getName()), 
+						new Path(outputPath + "/"  + fs.getPath().getName()));
+			}
+		}
+		
+		for (String unCompactedDeltaPartition: deltaFolders) {
+			//We have a partition delta partition but not in the existing partition.
+			System.out.println("Moving Delta Partition into table without compaction:" + unCompactedDeltaPartition);
+			hdfs.rename(new Path(deltaInputPath + "/" + unCompactedDeltaPartition), 
+					new Path(outputPath + "/"  + unCompactedDeltaPartition));
+		
+		}
+		//Code to add
+		
+	}
+	
+	private static void compactASinglePartition(String existingInputPath,
+			String deltaInputPath, String primaryKeyList, String maxColumns,
+			String outputPath, String numberOfReducers) throws IOException {
 		JobConf conf = new JobConf(new Configuration(), PartitionCompactor.class);
 
 		// hadoop
@@ -193,7 +290,6 @@ public class PartitionCompactor {
 
 		RunningJob job = JobClient.runJob(conf);
 		job.waitForCompletion();
-
 	}
 
 }

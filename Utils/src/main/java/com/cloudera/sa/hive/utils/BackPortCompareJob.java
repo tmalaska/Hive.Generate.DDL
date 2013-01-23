@@ -19,7 +19,12 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 /**
- * Hello world!
+ * This map/reduce will take two sets of text data and try to compare them by primary key or keys.
+ * <br><br>
+ * This job will report any difference between the two datasets at a cell level.
+ * <br><br>
+ * This job will attemp to match dates and numbers beyond a simple string match.  It will try 
+ * to convert all dates and numbers to a common format before comparing.
  * 
  */
 public class BackPortCompareJob {
