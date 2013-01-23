@@ -439,48 +439,74 @@ public class ScriptGenerator {
 				} else {
 					builder.append("|");
 				}
-				String type = c.getType().toUpperCase();
-				if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("CLOB")|| type.equals("VARCHAR") || type.equals("CLOB")) {
-					
-					for (int j = 0; j < c.getLength(); j++) {
+				
+				if (c.isPartition()) {
+					//If the field is a partition field the following code with generate a partition for every 5 rows.
+					String type = c.getType().toUpperCase();
+					if (type.equals("DATE")) {
 						
-						builder.append(strChar);
-					}
-				} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT") || type.equals("FLOAT")) {
-					StringBuilder numBuilder = new StringBuilder();
-					for (int j = 0; j < c.getLength(); j++) {
-						//add possible percision
-						if (c.getPercision() > 0) {
-							if (c.getPercision() == c.getLength() - j) {
-								numBuilder.append(".");
-							}
-						}
-						//add number
-						if (j == 0) { numBuilder.append("1"); }
-						else { numBuilder.append("0"); }
-					}
-					if (c.getPercision() == 0) {
-						BigInteger bi = new BigInteger(numBuilder.toString());
-						bi = bi.add(new BigInteger("" + i));
-							
-						builder.append(bi);	
+						Date newDate = new Date();
+						newDate.setDate(newDate.getDate() + i/5);
+						builder.append(simpleDateFormat.format(newDate));
+					} else if (type.equals("OTHERDATE")) {
+						
+						Date newDate = new Date();
+						newDate.setDate(newDate.getDate() + i/5);
+						builder.append(simpleOtherDateFormat.format(newDate));
+					} else if (type.equals("DATETIME") || type.equals("DATETIME")) {
+						
+						Date newDate = new Date();
+						newDate.setDate(newDate.getDate() + i/5);
+						builder.append(simpleDateTimeFormat.format(newDate));
 					} else {
-						builder.append(numBuilder);
+						builder.append("" + i/5);
 					}
-					
-					
-				} else if (type.equals("DATE")) {
-					
-					Date newDate = new Date();
-					builder.append(simpleDateFormat.format(newDate));
-				} else if (type.equals("OTHERDATE")) {
-					
-					Date newDate = new Date();
-					builder.append(simpleOtherDateFormat.format(newDate));
-				} else if (type.equals("DATETIME") || type.equals("DATETIME")) {
-					
-					Date newDate = new Date();
-					builder.append(simpleDateTimeFormat.format(newDate));
+						
+				} else {
+				
+					String type = c.getType().toUpperCase();
+					if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("CLOB")|| type.equals("VARCHAR") || type.equals("CLOB")) {
+						
+						for (int j = 0; j < c.getLength(); j++) {
+							
+							builder.append(strChar);
+						}
+					} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT") || type.equals("FLOAT")) {
+						StringBuilder numBuilder = new StringBuilder();
+						for (int j = 0; j < c.getLength(); j++) {
+							//add possible percision
+							if (c.getPercision() > 0) {
+								if (c.getPercision() == c.getLength() - j) {
+									numBuilder.append(".");
+								}
+							}
+							//add number
+							if (j == 0) { numBuilder.append("1"); }
+							else { numBuilder.append("0"); }
+						}
+						if (c.getPercision() == 0) {
+							BigInteger bi = new BigInteger(numBuilder.toString());
+							bi = bi.add(new BigInteger("" + i));
+								
+							builder.append(bi);	
+						} else {
+							builder.append(numBuilder);
+						}
+						
+						
+					} else if (type.equals("DATE")) {
+						
+						Date newDate = new Date();
+						builder.append(simpleDateFormat.format(newDate));
+					} else if (type.equals("OTHERDATE")) {
+						
+						Date newDate = new Date();
+						builder.append(simpleOtherDateFormat.format(newDate));
+					} else if (type.equals("DATETIME") || type.equals("DATETIME")) {
+						
+						Date newDate = new Date();
+						builder.append(simpleDateTimeFormat.format(newDate));
+					}
 				}
 			}
 			if (i < linesOfData - 1) {

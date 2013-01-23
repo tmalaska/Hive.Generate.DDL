@@ -131,12 +131,13 @@ public class App
     	
     	ScriptGenerator.lineSeparator = System.getProperty("line.separator");
     	FileWriter writerD = new FileWriter(new File(directory + "/" + schema.getTableName() + "_SampleData.Init.txt"));
-    	writerD.write(ScriptGenerator.generateTestData(schema, prop, 0, 10,'A'));
+    	writerD.write(ScriptGenerator.generateTestData(schema, prop, 0, 12,'A'));
     	writerD.close();
     	
-    	if (prop.getProperty(Const.INSERT_INTO_LOGIC, "normal").equals(Const.INSERT_INTO_LOGIC_DELTA)) {
+    	if (prop.getProperty(Const.INSERT_INTO_LOGIC, "normal").equals(Const.INSERT_INTO_LOGIC_DELTA) || 
+    			prop.getProperty(Const.INSERT_INTO_LOGIC, "normal").equals(Const.INSERT_INTO_LOGIC_HIVE8_SIM)) {
     		FileWriter writerD2 = new FileWriter(new File(directory + "/" + schema.getTableName() + "_SampleData.Delta.txt"));
-        	writerD2.write(ScriptGenerator.generateTestData(schema, prop, 5, 15,'B'));
+        	writerD2.write(ScriptGenerator.generateTestData(schema, prop, 6, 18,'B'));
         	writerD2.close();
     	}
     	
