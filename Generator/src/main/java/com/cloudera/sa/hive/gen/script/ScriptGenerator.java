@@ -128,7 +128,7 @@ public class ScriptGenerator {
 		
 		boolean isFirstColumn = true;
 		for (Column c: columns) {
-			if (c.isPartition() == false) {
+			//if (c.isPartition() == false) {
 				if (isFirstColumn) {
 					isFirstColumn = false;
 				} else {
@@ -136,7 +136,7 @@ public class ScriptGenerator {
 				}
 				builder.append(lineSeparator);
 				builder.append("   " + c.getName() + "\tSTRING" );
-			}
+			//}
 		}
 		
 		builder.append(")" + lineSeparator);
@@ -232,6 +232,8 @@ public class ScriptGenerator {
 		
 		StringBuilder builder = new StringBuilder();
 		
+		builder.append("SET hive.exec.dynamic.partition=true;" + lineSeparator);
+        builder.append("SET hive.exec.dynamic.partition.mode=nonstrict;" + lineSeparator); 
 		builder.append("SET hive.exec.compress.output=true;" + lineSeparator); 
 		builder.append("SET io.seqfile.compression.type=BLOCK;" + lineSeparator);
 		builder.append("SET mapred.output.compression.codec = " + compressionCodec + ";" + lineSeparator);
@@ -253,7 +255,7 @@ public class ScriptGenerator {
 				} else {
 					builder.append(", ");
 				}
-				builder.append("a." + c.getName());
+				builder.append( c.getName());
 			}
 			builder.append(")");
 		}
@@ -263,6 +265,20 @@ public class ScriptGenerator {
 		if (columns.size() > 0) {
 			boolean isFirstColumn = true;
 			for (Column c: columns) {
+				if (c.isPartition() == false) {
+					if (isFirstColumn) {
+						isFirstColumn = false;
+					} else {
+						builder.append(", " + lineSeparator);
+					}
+					builder.append("    ");
+					
+					appendColumnForInsertIntoFromTemp(dateFormat,
+							otherDateFormat, datetimeFormat,
+							applyTeradataFormatting, doTrimOnString, builder, c);
+				}
+			}
+			for (Column c: partitionColumns) {
 				if (isFirstColumn) {
 					isFirstColumn = false;
 				} else {
@@ -270,72 +286,11 @@ public class ScriptGenerator {
 				}
 				builder.append("    ");
 				
-				String type = c.getType().toUpperCase();
-				if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("VARCHAR") || type.equals("CLOB")) {
-					if (doTrimOnString || applyTeradataFormatting) { builder.append("trim("); }
-					
-					builder.append("a." + c.getName());
-					
-					if (doTrimOnString || applyTeradataFormatting) { builder.append(")"); }
-				} else if (type.equals("DATE")) {
-					String fieldName = "a." + c.getName();
-					if (applyTeradataFormatting) {
-						fieldName = "trim(" + fieldName + ")";
-					}
-					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + dateFormat + "'))");
-				}else if (type.equals("OTHERDATE")) {
-					String fieldName = "a." + c.getName();
-					if (applyTeradataFormatting) {
-						fieldName = "trim(" + fieldName + ")";
-					}
-					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + otherDateFormat + "'))");
-				} else if (type.equals("DATETIME") || type.equals("TIMESTAMP")) {
-					String fieldName = "a." + c.getName();
-					if (applyTeradataFormatting) {
-						fieldName = "trim(" + fieldName + ")";
-					}
-					
-					builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + datetimeFormat + "'))");
-				} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT") || type.equals("FLOAT")) {
-					String fieldName = "a." + c.getName();
-					if (c.getPercision() == 0) {
-						
-						if (applyTeradataFormatting) {
-							fieldName = "trim(" + fieldName + ")";
-							if (type.equals("DECIMAL")) {
-								fieldName = "regexp_replace(" + fieldName + ",\\\"\\\\\\.[0-9]*\\\",\\\"\\\")";
-							}
-						} 
-						if (c.getLength() > 18) {
-							builder.append(fieldName);
-						} else if (c.getLength() > 9 || type.equals("BIGINT")) {
-							builder.append("cast(" + fieldName + " as BIGINT)");
-						} else if (c.getLength() > 4 || type.equals("INTEGER")) {
-							builder.append("cast(" + fieldName + " as INT)");
-						} else if (c.getLength() > 2 || type.equals("SMALLINT")) {
-							builder.append("cast(" + fieldName + " as SMALLINT)");
-						} else {
-							builder.append("cast(" + fieldName + " as TINYINT)");
-						}	
-						
-						
-					} else {
-						
-						if (applyTeradataFormatting) {
-							fieldName = "trim(" + fieldName + ")";
-							if (type.equals("DECIMAL")) {
-								fieldName = "regexp_replace(" + fieldName + ",\\\"^\\\\\\.\\\",\\\"0.\\\")";
-							}
-						}
-						if (c.getLength() > 17) {
-							builder.append(fieldName);
-						} else {
-							builder.append("cast(" + fieldName + " as DOUBLE)");
-						}
-					}
-				}
-				
+				appendColumnForInsertIntoFromTemp(dateFormat,
+						otherDateFormat, datetimeFormat,
+						applyTeradataFormatting, doTrimOnString, builder, c);
 			}
+			
 			builder.append(lineSeparator);
 		}
 		
@@ -349,6 +304,76 @@ public class ScriptGenerator {
 		builder.append(";");
 		
 		return builder.toString();	
+	}
+
+	private static void appendColumnForInsertIntoFromTemp(String dateFormat,
+			String otherDateFormat, String datetimeFormat,
+			boolean applyTeradataFormatting, boolean doTrimOnString,
+			StringBuilder builder, Column c) {
+		String type = c.getType().toUpperCase();
+		if (type.equals("VARCHAR2") || type.equals("CHAR") || type.equals("VARCHAR") || type.equals("CLOB")) {
+			if (doTrimOnString || applyTeradataFormatting) { builder.append("trim("); }
+			
+			builder.append("a." + c.getName());
+			
+			if (doTrimOnString || applyTeradataFormatting) { builder.append(")"); }
+		} else if (type.equals("DATE")) {
+			String fieldName = "a." + c.getName();
+			if (applyTeradataFormatting) {
+				fieldName = "trim(" + fieldName + ")";
+			}
+			builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + dateFormat + "'))");
+		}else if (type.equals("OTHERDATE")) {
+			String fieldName = "a." + c.getName();
+			if (applyTeradataFormatting) {
+				fieldName = "trim(" + fieldName + ")";
+			}
+			builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + otherDateFormat + "'))");
+		} else if (type.equals("DATETIME") || type.equals("TIMESTAMP")) {
+			String fieldName = "a." + c.getName();
+			if (applyTeradataFormatting) {
+				fieldName = "trim(" + fieldName + ")";
+			}
+			
+			builder.append("from_unixtime(unix_timestamp(" + fieldName + ", '" + datetimeFormat + "'))");
+		} else if (type.equals("NUMBER") || type.equals("DECIMAL") || type.equals("BYTEINT") || type.equals("SMALLINT") || type.equals("INTEGER")|| type.equals("BIGINT") || type.equals("FLOAT")) {
+			String fieldName = "a." + c.getName();
+			if (c.getPercision() == 0) {
+				
+				if (applyTeradataFormatting) {
+					fieldName = "trim(" + fieldName + ")";
+					if (type.equals("DECIMAL")) {
+						fieldName = "regexp_replace(" + fieldName + ",\\\"\\\\\\.[0-9]*\\\",\\\"\\\")";
+					}
+				} 
+				if (c.getLength() > 18) {
+					builder.append(fieldName);
+				} else if (c.getLength() > 9 || type.equals("BIGINT")) {
+					builder.append("cast(" + fieldName + " as BIGINT)");
+				} else if (c.getLength() > 4 || type.equals("INTEGER")) {
+					builder.append("cast(" + fieldName + " as INT)");
+				} else if (c.getLength() > 2 || type.equals("SMALLINT")) {
+					builder.append("cast(" + fieldName + " as SMALLINT)");
+				} else {
+					builder.append("cast(" + fieldName + " as TINYINT)");
+				}	
+				
+				
+			} else {
+				
+				if (applyTeradataFormatting) {
+					fieldName = "trim(" + fieldName + ")";
+					if (type.equals("DECIMAL")) {
+						fieldName = "regexp_replace(" + fieldName + ",\\\"^\\\\\\.\\\",\\\"0.\\\")";
+					}
+				}
+				if (c.getLength() > 17) {
+					builder.append(fieldName);
+				} else {
+					builder.append("cast(" + fieldName + " as DOUBLE)");
+				}
+			}
+		}
 	}
 
 	

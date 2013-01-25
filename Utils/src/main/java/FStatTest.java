@@ -4,6 +4,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 
+import javax.security.auth.Subject;
+import javax.security.auth.login.LoginContext;
+
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.Stat;
 
@@ -15,6 +18,7 @@ public class FStatTest {
 	static int openFiles = 0;
 	static int maxOpenFiles = 0;
 	
+	
 	/**
 	 * @param args
 	 */
@@ -24,13 +28,18 @@ public class FStatTest {
 		int runs = Integer.parseInt(args[2]);
 		int waitTime = Integer.parseInt(args[3]);
 		String fStatFlag = args[4];
+		
+		String subjectUser = "";
+		if (args.length > 5) {
+			subjectUser = args[5];
+		}
 
 		System.out.println("Real test - no sync");
 		
 		Thread[] tArray = new Thread[numOfThreads];
 		
 		for (int i = 0; i < numOfThreads; i++) {
-			tArray[i] = new Thread(new FStatThread(fileName, runs, waitTime, i, fStatFlag.toLowerCase().equals("t")));
+			tArray[i] = new Thread(new FStatThread(fileName, runs, waitTime, i, fStatFlag.toLowerCase().equals("t"), subjectUser));
 		}
 		
 		for (int i = 0; i < numOfThreads; i++) {
@@ -46,15 +55,17 @@ public class FStatTest {
 		int waitTime;
 		int threadNum;
 		boolean fstatFlag;
+		String subjectUser;
 		int nothing = 0;
 		static Object  sync = new Object();
 		
-		FStatThread(String fileName, int runs, int waitTime, int threadNum, boolean fstatFlag) {
+		FStatThread(String fileName, int runs, int waitTime, int threadNum, boolean fstatFlag, String subjectUser) {
 			this.fileName = fileName;
 			this.runs = runs;
 			this.waitTime = waitTime;
 			this.threadNum = threadNum;
 			this.fstatFlag = fstatFlag; 
+			this.subjectUser = subjectUser;
 			
 		}
 		
@@ -82,6 +93,11 @@ public class FStatTest {
 							
 						//}
 					}
+					if (subjectUser.isEmpty() == false) {
+						//LoginContext lc = new LoginContext("hadoop-user-kerberos", );
+					    
+						//Subject.doAs(subjectUser, new ExampleAction());
+					}
 					Thread.sleep((int)(waitTime ));
 				} catch (Exception e) {
 					System.err.println("It failed at " +i  + " FCnt:" + ++FStatTest.failures + " OF:" + openFiles);
@@ -101,6 +117,19 @@ public class FStatTest {
 				}
 			}
 			System.out.println("Finished:S:" + ++FStatTest.successes + " F:" + FStatTest.failures + " " + nothing + " max:" + maxOpenFiles + " currentOpen:" + openFiles);
-		}
+		}	
 	}
+	
+	class ExampleAction implements java.security.PrivilegedAction {
+        public Object run() {
+            java.io.File f = new java.io.File("foo.txt");
+
+            // the following call invokes a security check
+            if (f.exists()) {
+                System.out.println("File foo.txt exists");
+            }
+            return null;
+        }
+    }
+	
 }

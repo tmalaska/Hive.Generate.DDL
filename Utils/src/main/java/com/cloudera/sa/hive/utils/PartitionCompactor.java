@@ -202,12 +202,12 @@ public class PartitionCompactor {
 		FileSystem hdfs = FileSystem.get(config);
 		FileStatus[] folders = hdfs.listStatus(new Path(deltaInputPath));
 		
-		if (folders.length > 0 || folders[0].isDirectory()) {
+		if (folders.length > 0 && folders[0].isDirectory()) {
 			return true;
 		}
 
 		folders = hdfs.listStatus(new Path(existingInputPath));
-		if (folders.length > 0 || folders[0].isDirectory()) {
+		if (folders.length > 0 && folders[0].isDirectory()) {
 			return true;
 		}
 		
@@ -223,6 +223,14 @@ public class PartitionCompactor {
 		Configuration config = new Configuration();
 		FileSystem hdfs = FileSystem.get(config);
 		FileStatus[] deltaFolderStatusArray = hdfs.listStatus(new Path(deltaInputPath));
+		
+		Path outputPathPath = new Path(outputPath);
+		
+		if (hdfs.exists(outputPathPath) == false) {
+			if (hdfs.mkdirs(outputPathPath) == false) {
+				throw new RuntimeException("Unable to create " + outputPathPath);
+			}
+		}
 		
 		for (FileStatus fs: deltaFolderStatusArray) {
 			deltaFolders.add(fs.getPath().getName());
@@ -242,16 +250,23 @@ public class PartitionCompactor {
 			} else {
 				//We have a partition that exist is the existing data but not in the delta data.
 				System.out.println("Moving Existing Partition Back into table:" + fs.getPath().getName());
-				hdfs.rename(new Path(existingInputPath + "/" + fs.getPath().getName()), 
-						new Path(outputPath + "/"  + fs.getPath().getName()));
+				System.out.println("Moving " + existingInputPath + "/" + fs.getPath().getName() + " to " + outputPath + "/"  + fs.getPath().getName());
+				if (hdfs.rename(new Path(existingInputPath + "/" + fs.getPath().getName()), 
+						new Path(outputPath + "/"  + fs.getPath().getName())) == false) {
+					throw new RuntimeException("Unable to move file");
+				}
 			}
 		}
 		
 		for (String unCompactedDeltaPartition: deltaFolders) {
 			//We have a partition delta partition but not in the existing partition.
 			System.out.println("Moving Delta Partition into table without compaction:" + unCompactedDeltaPartition);
-			hdfs.rename(new Path(deltaInputPath + "/" + unCompactedDeltaPartition), 
-					new Path(outputPath + "/"  + unCompactedDeltaPartition));
+			System.out.println("Moving " + deltaInputPath + "/" + unCompactedDeltaPartition + " to " + outputPath + "/"  + unCompactedDeltaPartition);
+			
+			if (hdfs.rename(new Path(deltaInputPath + "/" + unCompactedDeltaPartition), 
+					new Path(outputPath + "/"  + unCompactedDeltaPartition)) == false){
+				throw new RuntimeException("Unable to move file");
+			}
 		
 		}
 		//Code to add

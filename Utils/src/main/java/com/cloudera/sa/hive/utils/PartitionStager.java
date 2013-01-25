@@ -81,7 +81,10 @@ public class PartitionStager {
 			
 		} else {
 			System.out.println("Moving " + rootFolder + " to " + tempRootFolder);
-			hdfs.rename(rootFolder, tempRootFolder);	
+			if (hdfs.rename(rootFolder, tempRootFolder)) {
+				System.out.println("Unable to move!!!");
+			}
+				
 		}
 		
 		System.out.println("Making " + rootFolder);
