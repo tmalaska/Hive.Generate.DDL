@@ -70,7 +70,7 @@ public class Hive8InsertIntoSimulator {
 			System.out.println(hdfs.listStatus(tempRootFolder).length + " files is " + tempRootFolder);
 		}else if (stage.equals("reinsert")){
 			
-			if (tableIsPartitioned(hdfs, tempRootFolder)) {
+			if (tableIsPartitioned(hdfs, tempRootFolder) || tableIsPartitioned(hdfs, rootFolder) ) {
 				// We are dealing with a partitioned table
 				System.out.println("Reinserting partitions");	
 				reinsertAllPartitions(hdfs, rootFolder, tempRootFolder);
@@ -81,6 +81,9 @@ public class Hive8InsertIntoSimulator {
 			}
 			
 			
+		} else if (stage.equals("cleanup")) {
+			System.out.println("Removing Temp Existing Dir");
+			hdfs.delete(tempRootFolder, true);
 		} else {
 			System.out.println("Unknow Stage: Doing Nothing");
 		}

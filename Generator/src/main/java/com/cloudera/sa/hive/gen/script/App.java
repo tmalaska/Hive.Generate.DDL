@@ -279,6 +279,8 @@ public class App
     	
     	if (insertInfoLogic.equals(Const.INSERT_INTO_LOGIC_HIVE8_SIM)) {
     		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.Hive8InsertIntoSimulator reinsert " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
+    		builder.append(ls + ls);
+    		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.Hive8InsertIntoSimulator cleanup " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
     	} else if (insertInfoLogic.equals(Const.INSERT_INTO_LOGIC_DELTA)) {
     		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.PartitionStager dPrep " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
     		builder.append(ls + ls);
