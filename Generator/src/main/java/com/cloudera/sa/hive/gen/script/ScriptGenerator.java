@@ -22,7 +22,11 @@ public class ScriptGenerator {
 		
 		String ls = System.getProperty("line.separator");
 		
-		if ( externalLoc.isEmpty() == false) {
+		if (externalLoc == null) {
+			externalLoc = "";
+		}
+		
+		if (  externalLoc.isEmpty() == false) {
 			
 			
 			
