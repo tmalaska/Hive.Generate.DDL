@@ -70,15 +70,7 @@ public class Hive8InsertIntoSimulator {
 			System.out.println(hdfs.listStatus(tempRootFolder).length + " files is " + tempRootFolder);
 		}else if (stage.equals("reinsert")){
 			
-			if (tableIsPartitioned(hdfs, tempRootFolder) || tableIsPartitioned(hdfs, rootFolder) ) {
-				// We are dealing with a partitioned table
-				System.out.println("Reinserting partitions");	
-				reinsertAllPartitions(hdfs, rootFolder, tempRootFolder);
-			} else {
-				System.out.println("Reinserting non-partition table data");
-				// We are dealing with a unpartitioned table
-				reinsertPartition(hdfs, rootFolder, tempRootFolder);	
-			}
+			reinsert(hdfs, rootFolder, tempRootFolder);
 			
 			
 		} else if (stage.equals("cleanup")) {
@@ -90,6 +82,19 @@ public class Hive8InsertIntoSimulator {
 		
 		hdfs.close();
 		System.out.println("----------------------------- Finished " + stage);
+	}
+
+	private static void reinsert(FileSystem hdfs, Path rootFolder,
+			Path tempRootFolder) throws FileNotFoundException, IOException {
+		if (tableIsPartitioned(hdfs, tempRootFolder) || tableIsPartitioned(hdfs, rootFolder) ) {
+			// We are dealing with a partitioned table
+			System.out.println("Reinserting partitions");	
+			reinsertAllPartitions(hdfs, rootFolder, tempRootFolder);
+		} else {
+			System.out.println("Reinserting non-partition table data");
+			// We are dealing with a unpartitioned table
+			reinsertPartition(hdfs, rootFolder, tempRootFolder);	
+		}
 	}
 	
 	public static boolean tableIsPartitioned(FileSystem hdfs, Path tempRootFolder) throws FileNotFoundException, IOException {
@@ -103,18 +108,19 @@ public class Hive8InsertIntoSimulator {
 	private static void reinsertAllPartitions(FileSystem hdfs, Path rootFolder, Path tempRootFolder) throws FileNotFoundException, IOException {
 		FileStatus[] tempRootFolderFiles = hdfs.listStatus(tempRootFolder);
 		for (FileStatus fs: tempRootFolderFiles) {
-			if (fs.isDirectory() == false) {
-				throw new RuntimeException("Found file " + fs.getPath() + " in root directory while tring to reinsert partitions");
-			}
+			
 			String dirName = fs.getPath().getName();
 			Path rootPartitionDirectory = new Path(rootFolder + "/" + dirName);
 			
-			if (hdfs.exists(rootPartitionDirectory) == false) {
-				//The partition doesn't exist so we have to recreate the directory
-				hdfs.mkdirs(rootPartitionDirectory);
+			if (fs.isDirectory() == false) {
+				
+				if (hdfs.exists(rootPartitionDirectory) == false) {
+					//The partition doesn't exist so we have to recreate the directory
+					System.out.println("Stage a - mkdirs: " + rootPartitionDirectory);
+					hdfs.mkdirs(rootPartitionDirectory);
+				}
 			}
-			
-			reinsertPartition(hdfs, rootPartitionDirectory, fs.getPath());
+			reinsert(hdfs, rootPartitionDirectory, fs.getPath());	
 		}
 	}
 

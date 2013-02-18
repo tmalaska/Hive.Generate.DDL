@@ -187,6 +187,14 @@ public class PartitionCompactor {
 		String outputPath = args[4];
 		String numberOfReducers = args[5];
 
+		
+		compact(existingInputPath, deltaInputPath,
+				primaryKeyList, maxColumns, outputPath, numberOfReducers);
+	}
+	
+	private static void compact(String existingInputPath, 
+			String deltaInputPath, String primaryKeyList, String maxColumns,
+			String outputPath, String numberOfReducers) throws IOException {
 		if (isPartitioned(existingInputPath, deltaInputPath)) {
 			compactAllPartitions(existingInputPath, deltaInputPath,
 					primaryKeyList, maxColumns, outputPath, numberOfReducers);
@@ -194,7 +202,6 @@ public class PartitionCompactor {
 			compactASinglePartition(existingInputPath, deltaInputPath,
 					primaryKeyList, maxColumns, outputPath, numberOfReducers);	
 		}
-		
 	}
 
 	private static boolean isPartitioned(String existingInputPath, String deltaInputPath) throws IOException {
@@ -242,7 +249,8 @@ public class PartitionCompactor {
 				//We have a partition that exist is both the existing data and the delta data
 				//So we have to run a compaction mr job.
 				System.out.println("Running Compaction for partition:" + fs.getPath().getName());
-				compactASinglePartition(existingInputPath + "/" + fs.getPath().getName(), 
+				
+				compact(existingInputPath + "/" + fs.getPath().getName(), 
 						deltaInputPath + "/"  + fs.getPath().getName(),
 						primaryKeyList, maxColumns, outputPath + "/"  + fs.getPath().getName(), numberOfReducers);
 				//Remove the folder from the delta hashSet so we 
