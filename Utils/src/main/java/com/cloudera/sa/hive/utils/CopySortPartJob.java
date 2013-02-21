@@ -198,7 +198,7 @@ public class CopySortPartJob {
 		// Define input format and path
 		job.setInputFormatClass(TextInputFormat.class);
 		TextInputFormat.addInputPath(job, new Path(inputPath));
-
+		
 		// Define output format and path
 		if (compressionCodec.equals("none")) {
 			job.setOutputFormatClass(TextOutputFormat.class);

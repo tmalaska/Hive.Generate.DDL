@@ -86,6 +86,9 @@ public class Hive8InsertIntoSimulator {
 
 	private static void reinsert(FileSystem hdfs, Path rootFolder,
 			Path tempRootFolder) throws FileNotFoundException, IOException {
+		if (hdfs.exists(rootFolder) == false) {hdfs.mkdirs(rootFolder);}
+		if (hdfs.exists(tempRootFolder) == false) {hdfs.mkdirs(tempRootFolder);}
+		
 		if (tableIsPartitioned(hdfs, tempRootFolder) || tableIsPartitioned(hdfs, rootFolder) ) {
 			// We are dealing with a partitioned table
 			System.out.println("Reinserting partitions");	
