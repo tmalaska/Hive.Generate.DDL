@@ -17,6 +17,7 @@ import org.apache.hadoop.hive.serde2.columnar.BytesRefWritable;
 import org.apache.hadoop.io.BytesWritable; 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -304,6 +305,8 @@ public class PartitionCompactor {
 		conf.set(DELTA_FILE_PATH_CONF, deltaInputPath);
 		conf.set(PRIMARY_KEYS_CONF, primaryKeyList);
 		conf.set(RCFile.COLUMN_NUMBER_CONF_STR, maxColumns);
+		
+		conf.set("mapred.output.compression.codec", GzipCodec.class.toString());
 
 		RCFileInputFormat.addInputPath(conf, new Path(existingInputPath));
 		RCFileInputFormat.addInputPath(conf, new Path(deltaInputPath));
