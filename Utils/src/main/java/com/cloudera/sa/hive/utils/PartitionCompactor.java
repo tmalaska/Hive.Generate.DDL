@@ -306,6 +306,7 @@ public class PartitionCompactor {
 		conf.set(PRIMARY_KEYS_CONF, primaryKeyList);
 		conf.set(RCFile.COLUMN_NUMBER_CONF_STR, maxColumns);
 		
+		conf.set("mapred.output.compress", "true");
 		conf.set("mapred.output.compression.codec", GzipCodec.class.toString());
 
 		RCFileInputFormat.addInputPath(conf, new Path(existingInputPath));
