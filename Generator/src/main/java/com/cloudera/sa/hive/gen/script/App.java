@@ -7,8 +7,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
 
-import org.apache.hadoop.hive.shims.Hadoop23Shims;
-
 import au.com.bytecode.opencsv.CSVReader;
 
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema;
@@ -21,19 +19,17 @@ import com.cloudera.sa.hive.gen.script.pojo.RDBSchema.Column;
 public class App 
 {
     public static void main( String[] args ) throws IOException
-    {	
-    	Hadoop23Shims a;
-    	
+    {	    	  	
     	if (args.length != 3) {
     		System.out.println("hiveGen - help");
     		System.out.println("");
     		System.out.println("example:");
-    		System.out.println("hadoop jar hiveGen.jar <csv file path> <outputDir> <proerties file location>");
+    		System.out.println("java -jar hive.gen.script.jar <csv file path> <outputDir> <proerties file location>");
     		return;
     	}
         //CSVReader reader = new CSVReader(new FileReader("/Users/ted.malaska/Documents/workspace/hive.gen.script/samples/bigSample.csv"));
     	CSVReader reader = new CSVReader(new FileReader(args[0]));
-        //String outputDirector = "/Users/ted.malaska/Documents/workspace/hive.gen.script/output/";
+
     	String outputDirector = args[1];
     	
     	Properties prop = new Properties();
