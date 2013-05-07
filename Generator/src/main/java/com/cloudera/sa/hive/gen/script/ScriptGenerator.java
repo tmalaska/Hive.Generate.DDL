@@ -6,8 +6,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.hadoop.hive.ql.io.RCFile;
-
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema;
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema.Column;
 
