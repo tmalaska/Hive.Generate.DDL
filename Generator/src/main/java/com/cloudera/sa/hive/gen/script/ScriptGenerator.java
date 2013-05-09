@@ -6,6 +6,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
+
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema;
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema.Column;
 
@@ -13,6 +15,8 @@ public class ScriptGenerator {
 
 	public static String lineSeparator = System.getProperty("line.separator");
 
+	private static Logger logger = Logger.getLogger(ScriptGenerator.class);
+	
 	public static String generateChExternalDir(RDBSchema schema,
 			String externalLoc, String externalGroup, String externalPermission) {
 
@@ -176,7 +180,7 @@ public class ScriptGenerator {
 		return builder.toString();
 	}
 
-	public static String generateDeleteTempTableCommend(RDBSchema schema,
+	public static String generateDeleteTempTableCommand(RDBSchema schema,
 			Properties prop) {
 
 		String deleteTempFolder = prop.getProperty(
@@ -353,7 +357,7 @@ public class ScriptGenerator {
 			StringBuilder builder, Column c) {
 		String type = c.getType().toUpperCase();
 		if (type.equals("VARCHAR2") || type.equals("CHAR")
-				|| type.equals("VARCHAR") || type.equals("CLOB")) {
+				|| type.equals("VARCHAR") || type.equals("CLOB") || type.equals("STRING")) {
 			if (doTrimOnString || applyTeradataFormatting) {
 				builder.append("trim(");
 			}
@@ -388,7 +392,7 @@ public class ScriptGenerator {
 		} else if (type.equals("NUMBER") || type.equals("DECIMAL")
 				|| type.equals("BYTEINT") || type.equals("SMALLINT")
 				|| type.equals("INTEGER") || type.equals("BIGINT")
-				|| type.equals("FLOAT")) {
+				|| type.equals("FLOAT") || type.equals("INT")) {
 			String fieldName = "a." + c.getName();
 			if (c.getPercision() == 0) {
 
@@ -427,6 +431,9 @@ public class ScriptGenerator {
 				}
 			}
 		}
+		else
+			logger.warn("unrecognized type: " + type + " for column: " + c.getName());
+			
 	}
 
 	private static String convertColumnType(Column column) {
@@ -468,7 +475,7 @@ public class ScriptGenerator {
 		}
 	}
 
-	public static String generateLoadOverwrite(RDBSchema schema, Properties prop) {
+	public static String generateLoad(RDBSchema schema, Properties prop) {
 
 		String isLoadExternal = prop.getProperty(Const.IS_LOAD_FROM_HDFS);
 		String newLine = System.getProperty("line.separator");
@@ -483,11 +490,11 @@ public class ScriptGenerator {
 					+ newLine
 					+ "  echo \"Loading $f file...\" "
 					+ newLine
-					+ "  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" OVERWRITE INTO TABLE "
+					+ "  hive -e \"LOAD DATA LOCAL INPATH \\\"$f\\\" INTO TABLE "
 					+ schema.getTableName() + Const.TEMP_POSTFIX + ";\""
 					+ newLine + "done " + newLine + newLine;
 		} else {
-			return "hive -e \"LOAD DATA INPATH \\\"$1\\\" OVERWRITE INTO TABLE "
+			return "hive -e \"LOAD DATA INPATH \\\"$1\\\" INTO TABLE "
 					+ schema.getTableName()
 					+ Const.TEMP_POSTFIX
 					+ ";\""

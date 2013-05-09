@@ -169,14 +169,19 @@ public class App
 			RDBSchema schema, String externalLocation, String database, String externalGroup, String externalPermission) {
 		String ls = System.getProperty("line.separator");
 
-    	
-		return 
-				"hive -e \"create database " + database + ";\"" + 
-				ls + 
-				"hive -e \"" + ScriptGenerator.generateHiveTable(schema, externalLocation, database) + "\"" + 
+		StringBuilder builder = new StringBuilder();
+		
+		if (!database.equals("default")) {
+			builder.append("hive -e \"create database " + database + ";\"" + ls);
+		}
+		
+		builder.append("hive -e \"" + ScriptGenerator.generateHiveTable(schema, externalLocation, database) + "\"" + 
 				ls +
 				ls +
-				ScriptGenerator.generateChExternalDir(schema, externalLocation, externalGroup, externalPermission);
+				ScriptGenerator.generateChExternalDir(schema, externalLocation, externalGroup, externalPermission));
+		
+		return builder.toString(); 				
+				
 	}
     
 	private static String generateChangeDatabaseScript(RDBSchema schema, Properties prop) {
@@ -249,7 +254,7 @@ public class App
     	String insertInfoLogic = prop.getProperty(Const.INSERT_INTO_LOGIC, "normal");
     	String deleteTempTableData = prop.getProperty(Const.DELETE_TEMP_TABLE_DATA_AFTER_LOAD, "false");
     	boolean skipCopyStep = prop.getProperty(Const.SKIP_COPY_STEP, "false").equals("true");
-    	boolean dropTempTableAfterLoad = prop.getProperty(Const.DROP_TEMP_TABLE_AFTER_LOAD, "true").equals("true");
+    	boolean dropTempTableAfterLoad = prop.getProperty(Const.DROP_TEMP_TABLE_AFTER_LOAD, "false").equals("true");
 		String tempTableStoredAs = prop.getProperty(Const.TEMP_TABLE_STORED_AS);
 		String rowFormat = prop.getProperty(Const.TEMP_TABLE_ROW_FORMAT);
 		String externalLocation = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION, "");
@@ -264,7 +269,7 @@ public class App
     	
     	if (skipCopyStep == false) {
 	    	builder.append(ls + ls +"echo \"Stage: Loading data into Temp Table\""  + ls);
-	    	builder.append(ScriptGenerator.generateLoadOverwrite(schema, prop));
+	    	builder.append(ScriptGenerator.generateLoad(schema, prop));
 	    	builder.append(ls + "echo \"Stage: Preping\"" + ls);
     	}
     	
@@ -317,7 +322,7 @@ public class App
     	
     	if (deleteTempTableData.equals("true")) {
         	builder.append(ls + ls +"echo \"Stage: Delete Temp Table Data From HDFS\"" + ls);
-        	builder.append( ScriptGenerator.generateDeleteTempTableCommend(schema, prop) );	
+        	builder.append( ScriptGenerator.generateDeleteTempTableCommand(schema, prop) );	
     	}
     	return builder.toString();
 	}
