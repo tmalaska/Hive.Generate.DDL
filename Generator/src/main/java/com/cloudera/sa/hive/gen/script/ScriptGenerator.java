@@ -384,9 +384,9 @@ public class ScriptGenerator {
 		String dbType = column.getType().toUpperCase();
 		
 		
-		if (dbType.equals("VARCHAR2") || dbType.equals("CHAR")|| dbType.equals("VARCHAR") || dbType.equals("CLOB")) {
+		if (dbType.equals("STRING") || dbType.equals("VARCHAR2") || dbType.equals("CHAR")|| dbType.equals("VARCHAR") || dbType.equals("CLOB")) {
 			return "STRING";
-		} else if (dbType.equals("NUMBER") || dbType.equals("DECIMAL") || dbType.equals("BYTEINT")  || dbType.equals("SMALLINT") || dbType.equals("INTEGER")|| dbType.equals("BIGINT") || dbType.equals("FLOAT")) {
+		} else if (dbType.equals("NUMBER") || dbType.equals("DECIMAL") || dbType.equals("BYTEINT")  || dbType.equals("SMALLINT") || dbType.equals("INTEGER")|| dbType.equals("BIGINT") || dbType.equals("INT") || dbType.equals("FLOAT")) {
 			if (column.getPercision() == 0) {
 				if (column.getLength() > 18) {
 					return "STRING";
