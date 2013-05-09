@@ -7,6 +7,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
+
 import au.com.bytecode.opencsv.CSVReader;
 
 import com.cloudera.sa.hive.gen.script.pojo.RDBSchema;
@@ -18,6 +20,8 @@ import com.cloudera.sa.hive.gen.script.pojo.RDBSchema.Column;
  */
 public class App 
 {
+	private static Logger logger = Logger.getLogger(App.class);
+	
     public static void main( String[] args ) throws IOException
     {	    	  	
     	if (args.length != 3) {
@@ -47,6 +51,10 @@ public class App
             if (isHeaderRow) {
             	isHeaderRow = false;
             } else {
+            	if (nextLine.length < 3) {
+            		logger.warn("encounter invalid line in file, skipping: " + nextLine);
+            		continue;
+            	}
             	
             	String tableName = nextLine[0];
             	
@@ -148,12 +156,12 @@ public class App
 		String externalPermission = prop.getProperty(Const.ROOT_EXTERNAL_LOCATION_PERMISSIONS, "");
 		
 		ScriptGenerator.lineSeparator = System.getProperty("line.separator");
-		System.out.println("--- Create Script");
+		System.out.println("# Create Script");
 		
 		
 		System.out.println(generateMainHiveTableCreatationScript(schema, externalLocation, database, externalGroup, externalPermission));
 		
-		System.out.println("--- Load Script");
+		System.out.println("# Load Script");
 		System.out.println(generateLoadDataScript(schema, prop));
     }
 
@@ -180,11 +188,11 @@ public class App
 		StringBuilder builder = new StringBuilder();
 		String ls = System.getProperty("line.separator");
 		
-		builder.append(ls + ls +"echo --- Stage: Drop Existing Table " + ls + ls);
+		builder.append(ls +"echo \"Stage: Drop Existing Table \"" + ls);
 		builder.append("hive -e \"drop table " + databaseName + "." + schema.getTableName() + ";\"");
 		
 		databaseName = "$1";
-		builder.append(ls + ls +"echo --- Stage: Create new table in correct database " + ls + ls);
+		builder.append(ls + ls +"echo \"Stage: Create new table in correct database\"" + ls + ls);
 		builder.append(generateMainHiveTableCreatationScript(schema, externalLocation, databaseName, externalGroup, externalPermission));
 		
 		
@@ -202,7 +210,7 @@ public class App
 		StringBuilder builder = new StringBuilder();
 		String ls = System.getProperty("line.separator");
 		
-		builder.append(ls + ls +"echo --- Stage: Create New External Directory " + ls + ls);
+		builder.append(ls +"echo \"Stage: Create New External Directory\"" + ls );
 		builder.append("hadoop fs -mkdir $1" + ls);
 		builder.append("hadoop fs -mv " + externalLocation + "/" + tableName + " $1/" + tableName + ls);
 		builder.append("hive -e \"drop table " + databaseName + "." + tableName + ";\"" + ls);
@@ -228,9 +236,9 @@ public class App
 		StringBuilder builder = new StringBuilder();
 		String ls = System.getProperty("line.separator");
     	
-    	builder.append(ls + ls +"echo --- Stage: Create Temp Table " + ls + ls);
+    	builder.append(ls + "echo \"Stage: Create Temp Table\"" + ls);
     	builder.append("hive -e \"" + ScriptGenerator.generateBackPortHiveTable(schema, externalLocation, addJars, rowFormat) + "\"");
-    	builder.append(ls + ls + "echo --- Stage: Insert into Hive Table " + ls + ls);
+    	builder.append(ls + "echo \"Stage: Insert into Hive Table\"" + ls);
     	builder.append("hive -e \"" + ScriptGenerator.generateBackPort(schema, prop) + "\"");
     	
     	
@@ -251,13 +259,13 @@ public class App
 		StringBuilder builder = new StringBuilder();
 		String ls = System.getProperty("line.separator");
     	
-    	builder.append(ls + ls +"echo --- Stage: Create Temp Table " + ls + ls);
+    	builder.append(ls + ls +"echo \"Stage: Create Temp Table\"" + ls + ls);
     	builder.append("hive -e \"" + ScriptGenerator.generateTempHiveTable(schema, externalLocation, addJars, rowFormat, tempTableStoredAs) + "\"");
     	
     	if (skipCopyStep == false) {
-	    	builder.append(ls + ls +"echo --- Stage: Loading data into Temp Table "  + ls);
+	    	builder.append(ls + ls +"echo \"Stage: Loading data into Temp Table\""  + ls);
 	    	builder.append(ScriptGenerator.generateLoadOverwrite(schema, prop));
-	    	builder.append(ls + ls +"echo --- Stage: Preping " + ls + ls);
+	    	builder.append(ls + "echo \"Stage: Preping\"" + ls);
     	}
     	
     	if (insertInfoLogic.equals(Const.INSERT_INTO_LOGIC_HIVE8_SIM)) {
@@ -268,10 +276,10 @@ public class App
     		
     	}  
     	
-    	builder.append(ls + ls + "echo --- Stage: Insert into Hive Table " + ls + ls);
+    	builder.append(ls + "echo \"Stage: Insert into Hive Table\"" + ls);
     	builder.append("hive -e \"" + ScriptGenerator.generateInsertInto(schema, prop) + "\"");
     	
-    	builder.append(ls + ls +"echo --- Stage: Additional Prep and Staging " + ls + ls);
+    	builder.append(ls + ls +"echo \"Stage: Additional Prep and Staging\"" + ls);
     	
     	if (insertInfoLogic.equals(Const.INSERT_INTO_LOGIC_HIVE8_SIM)) {
     		builder.append("hadoop jar hive.loader.utils.jar com.cloudera.sa.hive.utils.Hive8InsertIntoSimulator reinsert " + schema.getTableName() + " " + prop.getProperty(Const.ROOT_EXTERNAL_LOCATION,  ""));
@@ -303,12 +311,12 @@ public class App
     	}  
     	
     	if (dropTempTableAfterLoad) {
-	    	builder.append(ls + ls +"echo --- Stage: Drop Hive Temp Table " + ls + ls);
+	    	builder.append(ls + ls +"echo \"Stage: Drop Hive Temp Table\"" + ls);
 	    	builder.append( ScriptGenerator.generateDropTempHiveTable(schema, prop) );
     	}
     	
     	if (deleteTempTableData.equals("true")) {
-        	builder.append(ls + ls +"echo --- Stage: Delete Temp Table Data From HDFS " + ls + ls);
+        	builder.append(ls + ls +"echo \"Stage: Delete Temp Table Data From HDFS\"" + ls);
         	builder.append( ScriptGenerator.generateDeleteTempTableCommend(schema, prop) );	
     	}
     	return builder.toString();
