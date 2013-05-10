@@ -4,9 +4,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 
-import javax.security.auth.Subject;
-import javax.security.auth.login.LoginContext;
-
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.Stat;
 
@@ -88,7 +85,7 @@ public class FStatTest {
 					FileDescriptor fd = fis.getFD();
 					if (fstatFlag) {
 						//synchronized (sync) {
-							Stat stat = NativeIO.fstat(fd);
+							Stat stat = NativeIO.getFstat(fd);
 							nothing += stat.getGroup().length() + stat.getOwner().length();
 							
 						//}

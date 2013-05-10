@@ -12,36 +12,35 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <hadoop.version>2.0.0-mr1-cdh4.2.1</hadoop.version>    
   </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
-      <version>0.23.1-mr1-cdh4.0.0b2</version>
+      <version>${hadoop.version}</version>      
       <scope>compile</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>
-        <version>0.23.1-mr1-cdh4.0.0b2</version>
+      <version>${hadoop.version}</version>            
       <scope>compile</scope>
     </dependency>
 
-	<dependency>
-		<groupId>javax.jdo</groupId>
-		<artifactId>jdo2-api</artifactId>
-		<version>2.2</version>
-	</dependency>
+    <dependency>
+      <groupId>javax.jdo</groupId>
+      <artifactId>jdo2-api</artifactId>
+      <version>2.2</version>
+    </dependency>
 	            
-
-	<dependency>
-		<groupId>org.apache.hive</groupId>
-		<artifactId>hive-exec</artifactId>
-		<version>0.8.1</version>
-		<!--  <version>0.9.0-cdh4.1.2</version>-->
-	</dependency>
-	
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-exec</artifactId>
+      <version>0.10.0-cdh4.2.1</version>      
+    </dependency>
 
   </dependencies>
 
