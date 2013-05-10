@@ -471,7 +471,7 @@ public class ScriptGenerator {
 				|| dbType.equals("DATETIME") || dbType.equals("TIMESTAMP")) {
 			return "TIMESTAMP";
 		} else {
-			throw new RuntimeException("Currently doesn't support " + dbType);
+			throw new RuntimeException("Currently doesn't support " + dbType + " for column " + column.getName());
 		}
 	}
 
