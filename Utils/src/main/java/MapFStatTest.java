@@ -65,7 +65,7 @@ public class MapFStatTest {
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			FileInputStream fis = new FileInputStream("/etc/hadoop/conf/log4j.properties");
-			NativeIO.getFstat(fis.getFD()).getGroup();	
+			NativeIO.fstat(fis.getFD()).getGroup();	
 			fis.close();
 		}
 	}
