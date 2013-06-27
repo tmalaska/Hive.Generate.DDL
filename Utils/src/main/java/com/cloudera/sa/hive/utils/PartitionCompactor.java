@@ -144,8 +144,8 @@ public class PartitionCompactor {
 				if(values.hasNext()) {
 					BytesRefArrayWritable value = values.next();
 					BytesRefWritable cell = value.get(0);
-					String cellStr = new String(cell.getData()).substring(cell.getStart(), cell.getStart() + cell.getLength());
-					
+					//String cellStr = new String(cell.getData()).substring(cell.getStart(), cell.getStart() + cell.getLength());
+					String cellStr = new String(cell.getBytesCopy());
 					
 					output.collect(newKey, value);
 				}
